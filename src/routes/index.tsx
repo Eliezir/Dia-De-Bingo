@@ -5,8 +5,12 @@ export const Route = createFileRoute('/')({
 
 function Home() {
   return (
-    <div className="p-2">
-      <h3>Welcome Home!!!</h3>
+    <div className="p-2 flex flex-col items-center justify-center h-screen">
+      <h3 className="text-2xl font-bold">Bem vindo, hoje é dia de bingo!</h3>
+      <p className="text-sm text-muted-foreground">
+        Clique no botão abaixo para criar uma sala
+      </p>
+      {/* <Button>Criar Sala</Button> */}
     </div>
   )
 }
