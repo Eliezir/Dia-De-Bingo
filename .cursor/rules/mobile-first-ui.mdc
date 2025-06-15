@@ -1,0 +1,276 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Mobile-First UI Rules
+
+## Breakpoints
+
+```typescript
+const breakpoints = {
+  sm: '640px',   // Small devices
+  md: '768px',   // Medium devices
+  lg: '1024px',  // Large devices
+  xl: '1280px',  // Extra large devices
+  '2xl': '1536px' // 2X large devices
+}
+```
+
+## Touch Targets
+
+1. **Minimum Size**: 44x44 pixels
+2. **Spacing**: Minimum 8px between touch targets
+3. **Hit Areas**: Extend beyond visible boundaries
+
+```tsx
+// Good
+<button className="p-3 min-h-[44px] min-w-[44px]">
+  <Icon />
+</button>
+
+// Bad
+<button className="p-1">
+  <Icon />
+</button>
+```
+
+## Layout Guidelines
+
+### 1. Container Widths
+```tsx
+// Mobile-first container
+<div className="w-full px-4 md:px-6 lg:px-8">
+  {/* Content */}
+</div>
+```
+
+### 2. Grid System
+```tsx
+// Responsive grid
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+  {/* Grid items */}
+</div>
+```
+
+### 3. Spacing
+```tsx
+// Responsive spacing
+<div className="space-y-4 md:space-y-6 lg:space-y-8">
+  {/* Spaced items */}
+</div>
+```
+
+## Typography
+
+### 1. Font Sizes
+```tsx
+// Responsive text
+<h1 className="text-2xl md:text-3xl lg:text-4xl">
+  Title
+</h1>
+```
+
+### 2. Line Heights
+```tsx
+// Readable line heights
+<p className="leading-relaxed md:leading-loose">
+  Content
+</p>
+```
+
+## Component Guidelines
+
+### 1. Bingo Card
+```tsx
+// Mobile-first bingo card
+<div className="
+  w-full max-w-[320px] 
+  aspect-square 
+  p-2 
+  md:p-4 
+  lg:p-6
+">
+  {/* Card content */}
+</div>
+```
+
+### 2. Number Draw
+```tsx
+// Mobile-friendly number display
+<div className="
+  text-4xl 
+  md:text-6xl 
+  lg:text-8xl 
+  font-bold
+">
+  {number}
+</div>
+```
+
+### 3. Player List
+```tsx
+// Scrollable player list
+<div className="
+  h-[200px] 
+  md:h-[300px] 
+  overflow-y-auto
+">
+  {/* Player items */}
+</div>
+```
+
+## Interaction Patterns
+
+### 1. Touch Feedback
+```tsx
+// Touch feedback
+<button className="
+  active:scale-95 
+  transition-transform
+">
+  Click me
+</button>
+```
+
+### 2. Swipe Actions
+```tsx
+// Swipeable component
+<div className="
+  touch-pan-x 
+  overflow-x-auto
+">
+  {/* Swipeable content */}
+</div>
+```
+
+## Accessibility
+
+### 1. Focus States
+```tsx
+// Visible focus
+<button className="
+  focus:outline-none 
+  focus:ring-2 
+  focus:ring-primary
+">
+  Action
+</button>
+```
+
+### 2. Screen Reader Support
+```tsx
+// ARIA labels
+<button 
+  aria-label="Mark number"
+  className="..."
+>
+  <Icon />
+</button>
+```
+
+## Performance
+
+### 1. Image Optimization
+```tsx
+// Responsive images
+<img 
+  src="image.jpg"
+  className="w-full h-auto"
+  loading="lazy"
+  alt="Description"
+/>
+```
+
+### 2. Animation Performance
+```tsx
+// Hardware-accelerated animations
+<div className="
+  transform-gpu 
+  will-change-transform
+">
+  {/* Animated content */}
+</div>
+```
+
+## Testing
+
+### 1. Device Testing
+- Test on multiple devices
+- Test in different orientations
+- Test with different screen sizes
+
+### 2. Touch Testing
+- Test touch interactions
+- Test swipe gestures
+- Test multi-touch
+
+## Best Practices
+
+1. **Start Mobile First**
+   - Design for mobile first
+   - Add desktop enhancements later
+
+2. **Use Relative Units**
+   - Use `rem` for typography
+   - Use `%` for widths
+   - Use `vh`/`vw` for viewport units
+
+3. **Optimize Images**
+   - Use appropriate image sizes
+   - Implement lazy loading
+   - Use modern image formats
+
+4. **Handle Orientation**
+   - Support both portrait and landscape
+   - Adjust layouts accordingly
+
+5. **Consider Network**
+   - Implement loading states
+   - Handle offline scenarios
+   - Optimize asset loading
+
+## Common Patterns
+
+### 1. Bottom Navigation
+```tsx
+<nav className="
+  fixed 
+  bottom-0 
+  left-0 
+  right-0 
+  bg-background 
+  border-t
+">
+  {/* Navigation items */}
+</nav>
+```
+
+### 2. Pull to Refresh
+```tsx
+<div className="
+  overscroll-contain 
+  touch-pan-y
+">
+  {/* Refreshable content */}
+</div>
+```
+
+### 3. Modal Dialogs
+```tsx
+<dialog className="
+  w-full 
+  max-w-[90%] 
+  md:max-w-[500px]
+">
+  {/* Modal content */}
+</dialog>
+```
+
+---
+
+**For more details, see:**
+- [shadcn/ui Documentation](mdc:https:/ui.shadcn.com)
+- [Tailwind CSS Documentation](mdc:https:/tailwindcss.com/docs)
+- [Mobile-First Design Principles](mdc:https:/www.smashingmagazine.com/2013/07/mobile-first-design)
+- [Touch Target Guidelines](mdc:https:/www.w3.org/WAI/WCAG21/Understanding/target-size.html)

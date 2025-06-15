@@ -1,0 +1,120 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Commit Message Rules
+
+All commit messages **must** follow the [Conventional Commits](mdc:https:/www.conventionalcommits.org/en/v1.0.0) specification, with project-specific guidance for our bingo platform.
+
+## Format
+
+```
+<type>(<scope>): <short summary>
+<BLANK LINE>
+[optional body]
+<BLANK LINE>
+[optional footer(s)]
+```
+
+### **Types**
+
+Use one of the following types:
+
+- `feat`:     A new feature (e.g. game logic, UI component, new API)
+- `fix`:      A bug fix (e.g. gameplay bug, UI glitch, backend error)
+- `docs`:     Documentation only changes (e.g. README, project docs)
+- `style`:    Changes that do not affect meaning (formatting, missing semi-colons, etc)
+- `refactor`: Code change that neither fixes a bug nor adds a feature (e.g. code cleanup, renaming)
+- `perf`:     Code change that improves performance
+- `test`:     Adding or correcting tests
+- `build`:    Changes that affect the build system or dependencies (e.g. Vite, Tailwind, shadcn/ui)
+- `ci`:       Changes to CI/CD config (e.g. GitHub Actions, Vercel config)
+- `chore`:    Other changes that don't modify src or test files
+- `revert`:   Reverts a previous commit
+
+### **Scope**
+
+Use a scope to clarify what part of the project is affected:
+
+- `room`:     Room-related features (creation, joining, status)
+- `player`:   Player-related features (joining, cards, avatars)
+- `game`:     Game logic (number drawing, win validation)
+- `ui`:       UI components and layouts
+- `realtime`: Real-time communication features
+- `supabase`: Database, auth, or Supabase-specific changes
+- `edge-fn`:  Edge Functions
+- `routing`:  Route changes
+- `lobby`:    Waiting room/lobby features
+- `gameplay`: Active game features
+- `styles`:   CSS, Tailwind, or styling changes
+- `deps`:     Dependency updates
+- `infra`:    Infrastructure changes
+
+### **Summary**
+
+- Use the imperative mood: "add", "fix", "update", not "added", "fixed", "updates"
+- Keep under 100 characters
+- Start with a capital letter
+- No period at the end
+
+### **Body (optional)**
+
+- Use if you need to explain "why" or "how" in more detail
+- Wrap lines at 100 characters
+- Explain the motivation for the change
+- Contrast with previous behavior
+
+### **Footer (optional)**
+
+- Reference issues or tasks, e.g. `Closes #123`, `Related to #456`
+- Breaking changes should be noted with `BREAKING CHANGE:`
+
+---
+
+## **Examples**
+
+```
+feat(room): add host controls for starting and resetting game
+
+fix(player): prevent duplicate bingo cards in the same room
+
+docs: update README with deployment instructions
+
+chore(deps): upgrade tailwindcss to v4
+
+revert: feat(room): add host controls for starting and resetting game
+
+feat(game): implement number drawing animation
+
+fix(realtime): handle disconnection during active game
+
+style(ui): improve mobile responsiveness of bingo card
+
+refactor(gameplay): optimize win validation logic
+
+perf(supabase): add indexes for faster room queries
+```
+
+---
+
+## **Enforcement**
+
+- All commits must pass these rules
+- If a commit does not follow the format, it will be rejected
+- Use commitlint to enforce these rules automatically
+
+---
+
+## **Why?**
+
+- Ensures a readable, searchable git history
+- Makes it easy to generate changelogs and track features/bugfixes
+- Helps all contributors understand the context of changes
+- Facilitates automated versioning and release notes
+
+---
+
+**For more details, see:**  
+- [Conventional Commits](mdc:https:/www.conventionalcommits.org/en/v1.0.0)
+- [Project README](mdc:../README.md)

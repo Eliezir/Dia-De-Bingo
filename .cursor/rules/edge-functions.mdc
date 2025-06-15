@@ -1,0 +1,351 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Edge Functions Rules
+
+## Function Structure
+
+### 1. Basic Structure
+```typescript
+// /supabase/functions/example/index.ts
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+serve(async (req) => {
+  try {
+    // Create Supabase client
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    )
+
+    // Handle request
+    const { data, error } = await handleRequest(req, supabaseClient)
+    if (error) throw error
+
+    // Return response
+    return new Response(
+      JSON.stringify({ data }),
+      { headers: { 'Content-Type': 'application/json' } }
+    )
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    )
+  }
+})
+```
+
+### 2. Request Handler
+```typescript
+const handleRequest = async (req: Request, supabase: SupabaseClient) => {
+  // Validate request method
+  if (req.method !== 'POST') {
+    throw new Error('Method not allowed')
+  }
+
+  // Parse request body
+  const body = await req.json()
+  if (!body) {
+    throw new Error('No body provided')
+  }
+
+  // Handle request based on type
+  switch (body.type) {
+    case 'create_room':
+      return handleCreateRoom(body, supabase)
+    case 'join_room':
+      return handleJoinRoom(body, supabase)
+    default:
+      throw new Error('Invalid request type')
+  }
+}
+```
+
+## Function Types
+
+### 1. Room Management
+```typescript
+// /supabase/functions/room/index.ts
+const handleCreateRoom = async (body: CreateRoomRequest, supabase: SupabaseClient) => {
+  // Validate input
+  if (!body.name) {
+    throw new Error('Name is required')
+  }
+
+  // Create room
+  const { data, error } = await supabase
+    .from('room')
+    .insert({
+      name: body.name,
+      code: generateRoomCode()
+    })
+    .select()
+    .single()
+
+  if (error) throw error
+  return { data }
+}
+```
+
+### 2. Game Logic
+```typescript
+// /supabase/functions/game/index.ts
+const handleDrawNumber = async (body: DrawNumberRequest, supabase: SupabaseClient) => {
+  // Validate room
+  const { data: room } = await supabase
+    .from('room')
+    .select('*')
+    .eq('id', body.roomId)
+    .single()
+
+  if (!room) {
+    throw new Error('Room not found')
+  }
+
+  // Draw number
+  const number = drawNumber(room.drawnNumbers)
+  
+  // Update room
+  const { data, error } = await supabase
+    .from('room')
+    .update({
+      drawnNumbers: [...room.drawnNumbers, number]
+    })
+    .eq('id', body.roomId)
+    .select()
+    .single()
+
+  if (error) throw error
+  return { data }
+}
+```
+
+## Error Handling
+
+### 1. Error Types
+```typescript
+class EdgeFunctionError extends Error {
+  constructor(
+    message: string,
+    public status: number = 400,
+    public code: string = 'BAD_REQUEST'
+  ) {
+    super(message)
+  }
+}
+
+class ValidationError extends EdgeFunctionError {
+  constructor(message: string) {
+    super(message, 400, 'VALIDATION_ERROR')
+  }
+}
+
+class NotFoundError extends EdgeFunctionError {
+  constructor(message: string) {
+    super(message, 404, 'NOT_FOUND')
+  }
+}
+```
+
+### 2. Error Handler
+```typescript
+const handleError = (error: Error) => {
+  if (error instanceof EdgeFunctionError) {
+    return new Response(
+      JSON.stringify({
+        error: error.message,
+        code: error.code
+      }),
+      {
+        status: error.status,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    )
+  }
+
+  return new Response(
+    JSON.stringify({
+      error: 'Internal server error',
+      code: 'INTERNAL_ERROR'
+    }),
+    {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    }
+  )
+}
+```
+
+## Security
+
+### 1. Authentication
+```typescript
+const authenticateRequest = async (req: Request, supabase: SupabaseClient) => {
+  const authHeader = req.headers.get('Authorization')
+  if (!authHeader) {
+    throw new ValidationError('No authorization header')
+  }
+
+  const token = authHeader.replace('Bearer ', '')
+  const { data: { user }, error } = await supabase.auth.getUser(token)
+
+  if (error || !user) {
+    throw new ValidationError('Invalid token')
+  }
+
+  return user
+}
+```
+
+### 2. Rate Limiting
+```typescript
+const rateLimiter = new Map<string, number>()
+
+const checkRateLimit = (key: string, limit: number, window: number) => {
+  const now = Date.now()
+  const windowStart = now - window
+
+  // Clean old entries
+  for (const [k, timestamp] of rateLimiter.entries()) {
+    if (timestamp < windowStart) {
+      rateLimiter.delete(k)
+    }
+  }
+
+  // Check limit
+  const count = Array.from(rateLimiter.values())
+    .filter(timestamp => timestamp > windowStart)
+    .length
+
+  if (count >= limit) {
+    throw new EdgeFunctionError('Rate limit exceeded', 429, 'RATE_LIMIT')
+  }
+
+  rateLimiter.set(key, now)
+}
+```
+
+## Testing
+
+### 1. Unit Tests
+```typescript
+// /supabase/functions/__tests__/room.test.ts
+import { assertEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts'
+import { handleCreateRoom } from '../room/index.ts'
+
+Deno.test('create room', async () => {
+  const mockSupabase = {
+    from: () => ({
+      insert: () => ({
+        select: () => ({
+          single: () => ({
+            data: { id: 1, name: 'Test Room' },
+            error: null
+          })
+        })
+      })
+    })
+  }
+
+  const result = await handleCreateRoom(
+    { name: 'Test Room' },
+    mockSupabase as any
+  )
+
+  assertEquals(result.data.name, 'Test Room')
+})
+```
+
+### 2. Integration Tests
+```typescript
+// /supabase/functions/__tests__/integration.test.ts
+import { serve } from '../example/index.ts'
+
+Deno.test('create room endpoint', async () => {
+  const req = new Request('http://localhost:54321/functions/v1/room', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer test-token'
+    },
+    body: JSON.stringify({
+      type: 'create_room',
+      name: 'Test Room'
+    })
+  })
+
+  const res = await serve(req)
+  const data = await res.json()
+
+  assertEquals(res.status, 200)
+  assertEquals(data.data.name, 'Test Room')
+})
+```
+
+## Best Practices
+
+1. **Function Organization**
+   - Keep functions small and focused
+   - Use clear naming conventions
+   - Group related functions
+   - Document function purpose
+
+2. **Error Handling**
+   - Use custom error types
+   - Provide meaningful messages
+   - Handle all error cases
+   - Log errors appropriately
+
+3. **Security**
+   - Validate all inputs
+   - Implement rate limiting
+   - Use proper authentication
+   - Sanitize data
+
+4. **Performance**
+   - Optimize database queries
+   - Cache when appropriate
+   - Handle timeouts
+   - Monitor execution time
+
+5. **Testing**
+   - Write unit tests
+   - Write integration tests
+   - Test error cases
+   - Mock external services
+
+## Deployment
+
+### 1. Configuration
+```toml
+# /supabase/config.toml
+[functions]
+  [functions.room]
+    verify_jwt = true
+    rate_limit = 100
+    rate_limit_window = 60
+```
+
+### 2. Deployment Script
+```bash
+#!/bin/bash
+# /supabase/deploy.sh
+
+# Deploy functions
+supabase functions deploy room
+supabase functions deploy game
+
+# Set secrets
+supabase secrets set --env production
+```
+
+---
+
+**For more details, see:**
+- [Supabase Edge Functions Documentation](mdc:https:/supabase.com/docs/guides/functions)
+- [Deno Documentation](mdc:https:/deno.land/manual)
+- [Edge Functions Best Practices](mdc:https:/supabase.com/docs/guides/functions/best-practices)

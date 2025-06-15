@@ -1,0 +1,224 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Real-Time Communication Rules
+
+## Event Naming Conventions
+
+### Room Events
+```
+room:created
+room:status_changed
+room:number_drawn
+room:game_started
+room:game_ended
+```
+
+### Player Events
+```
+player:joined
+player:left
+player:bingo_claimed
+player:card_updated
+```
+
+### System Events
+```
+system:error
+system:reconnected
+system:disconnected
+```
+
+## State Synchronization
+
+### 1. Room State
+```typescript
+interface RoomState {
+  status: 'waiting' | 'playing' | 'finished';
+  drawnNumbers: number[];
+  players: Player[];
+  currentNumber?: number;
+}
+```
+
+### 2. Player State
+```typescript
+interface PlayerState {
+  id: string;
+  name: string;
+  card: number[][];
+  markedNumbers: number[];
+  isHost: boolean;
+}
+```
+
+## Subscription Patterns
+
+### 1. Room Subscription
+```typescript
+const roomSubscription = supabase
+  .channel('room')
+  .on('postgres_changes', {
+    event: '*',
+    schema: 'public',
+    table: 'room',
+    filter: `id=eq.${roomId}`
+  }, handleRoomChange)
+```
+
+### 2. Player Subscription
+```typescript
+const playerSubscription = supabase
+  .channel('players')
+  .on('presence', { event: 'sync' }, handlePlayerSync)
+```
+
+## Error Handling
+
+### 1. Connection Errors
+```typescript
+const handleConnectionError = (error: Error) => {
+  // Log error
+  // Show user-friendly message
+  // Attempt reconnection
+}
+```
+
+### 2. Reconnection Strategy
+```typescript
+const reconnectStrategy = {
+  retries: 3,
+  delay: 1000,
+  backoff: true
+}
+```
+
+## Best Practices
+
+1. **Always Clean Up Subscriptions**
+   ```typescript
+   useEffect(() => {
+     const subscription = subscribe()
+     return () => {
+       subscription.unsubscribe()
+     }
+   }, [])
+   ```
+
+2. **Handle Race Conditions**
+   ```typescript
+   const handleStateUpdate = async (newState: State) => {
+     const currentState = await getCurrentState()
+     if (isStateNewer(currentState, newState)) {
+       updateState(newState)
+     }
+   }
+   ```
+
+3. **Implement Optimistic Updates**
+   ```typescript
+   const markNumber = async (number: number) => {
+     // Optimistically update UI
+     setMarkedNumbers(prev => [...prev, number])
+     // Send to server
+     await updateServer(number)
+   }
+   ```
+
+4. **Use Presence for Player Tracking**
+   ```typescript
+   const trackPresence = () => {
+     return {
+       id: playerId,
+       name: playerName,
+       lastSeen: new Date().toISOString()
+     }
+   }
+   ```
+
+## Security Rules
+
+1. **Validate All Incoming Data**
+   ```typescript
+   const validateEvent = (event: Event) => {
+     if (!isValidEvent(event)) {
+       throw new Error('Invalid event data')
+     }
+   }
+   ```
+
+2. **Implement Rate Limiting**
+   ```typescript
+   const rateLimiter = {
+     maxRequests: 10,
+     timeWindow: 1000 // 1 second
+   }
+   ```
+
+## Performance Guidelines
+
+1. **Batch Updates**
+   ```typescript
+   const batchUpdate = (updates: Update[]) => {
+     // Collect updates
+     // Send in single batch
+   }
+   ```
+
+2. **Debounce Frequent Events**
+   ```typescript
+   const debouncedUpdate = debounce((update: Update) => {
+     sendUpdate(update)
+   }, 100)
+   ```
+
+## Testing Real-Time Features
+
+1. **Mock Supabase Client**
+   ```typescript
+   const mockSupabase = {
+     channel: () => ({
+       on: jest.fn(),
+       subscribe: jest.fn()
+     })
+   }
+   ```
+
+2. **Test Event Handlers**
+   ```typescript
+   test('handles room status change', () => {
+     const handler = jest.fn()
+     subscribeToRoom(handler)
+     emitRoomEvent('status_changed')
+     expect(handler).toHaveBeenCalled()
+   })
+   ```
+
+## Documentation
+
+1. **Event Documentation**
+   ```typescript
+   /**
+    * @event room:status_changed
+    * @description Emitted when room status changes
+    * @param {RoomStatus} status - New room status
+    */
+   ```
+
+2. **Handler Documentation**
+   ```typescript
+   /**
+    * @handler handleRoomStatusChange
+    * @description Handles room status change events
+    * @param {RoomStatusChangeEvent} event - Status change event
+    */
+   ```
+
+---
+
+**For more details, see:**
+- [Supabase Realtime Documentation](mdc:https:/supabase.com/docs/guides/realtime)
+- [WebSocket Best Practices](mdc:https:/websocket.org/echo.html)
+- [Real-Time Communication Patterns](mdc:https:/www.pubnub.com/guides/real-time-communication-patterns)

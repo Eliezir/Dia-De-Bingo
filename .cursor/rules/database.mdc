@@ -1,0 +1,303 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Database Rules
+
+## Table Structure
+
+### 1. Room Table
+```sql
+CREATE TABLE public.room (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  code character varying NOT NULL UNIQUE,
+  drawn_numbers integer[] DEFAULT '{}',
+  status room_status NOT NULL DEFAULT 'waiting',
+  CONSTRAINT room_pkey PRIMARY KEY (id)
+);
+```
+
+### 2. Player Table
+```sql
+CREATE TABLE public.player (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  name character varying NOT NULL DEFAULT '',
+  bingo_sheet jsonb NOT NULL,
+  room_id bigint NOT NULL,
+  CONSTRAINT player_pkey PRIMARY KEY (id),
+  CONSTRAINT player_room_id_fkey FOREIGN KEY (room_id) REFERENCES public.room(id)
+);
+```
+
+## Query Patterns
+
+### 1. Room Queries
+```typescript
+// Create room
+const createRoom = async () => {
+  return supabase
+    .from('room')
+    .insert({ code: generateCode() })
+    .select()
+    .single();
+};
+
+// Get room by code
+const getRoomByCode = async (code: string) => {
+  return supabase
+    .from('room')
+    .select('*')
+    .eq('code', code)
+    .single();
+};
+
+// Update room status
+const updateRoomStatus = async (roomId: number, status: RoomStatus) => {
+  return supabase
+    .from('room')
+    .update({ status })
+    .eq('id', roomId);
+};
+```
+
+### 2. Player Queries
+```typescript
+// Add player to room
+const addPlayer = async (roomId: number, player: PlayerInput) => {
+  return supabase
+    .from('player')
+    .insert({
+      room_id: roomId,
+      name: player.name,
+      bingo_sheet: player.bingoSheet
+    })
+    .select()
+    .single();
+};
+
+// Get room players
+const getRoomPlayers = async (roomId: number) => {
+  return supabase
+    .from('player')
+    .select('*')
+    .eq('room_id', roomId);
+};
+```
+
+## Real-time Subscriptions
+
+### 1. Room Subscription
+```typescript
+const subscribeToRoom = (roomId: number) => {
+  return supabase
+    .channel(`room:${roomId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'room',
+        filter: `id=eq.${roomId}`
+      },
+      handleRoomChange
+    )
+    .subscribe();
+};
+```
+
+### 2. Player Subscription
+```typescript
+const subscribeToPlayers = (roomId: number) => {
+  return supabase
+    .channel(`players:${roomId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'player',
+        filter: `room_id=eq.${roomId}`
+      },
+      handlePlayerChange
+    )
+    .subscribe();
+};
+```
+
+## Data Validation
+
+### 1. Room Validation
+```typescript
+const validateRoom = (room: Room) => {
+  // Validate room structure
+  // Check required fields
+  // Validate status
+  // Validate drawn numbers
+};
+```
+
+### 2. Player Validation
+```typescript
+const validatePlayer = (player: Player) => {
+  // Validate player structure
+  // Check required fields
+  // Validate bingo sheet
+  // Validate room reference
+};
+```
+
+## Indexes
+
+### 1. Room Indexes
+```sql
+-- Index for room code lookups
+CREATE INDEX idx_room_code ON room(code);
+
+-- Index for room status queries
+CREATE INDEX idx_room_status ON room(status);
+```
+
+### 2. Player Indexes
+```sql
+-- Index for player room lookups
+CREATE INDEX idx_player_room ON player(room_id);
+
+-- Index for player name searches
+CREATE INDEX idx_player_name ON player(name);
+```
+
+## Security Rules
+
+### 1. Row Level Security
+```sql
+-- Enable RLS
+ALTER TABLE room ENABLE ROW LEVEL SECURITY;
+ALTER TABLE player ENABLE ROW LEVEL SECURITY;
+
+-- Room policies
+CREATE POLICY "Rooms are viewable by anyone"
+  ON room FOR SELECT
+  USING (true);
+
+CREATE POLICY "Only hosts can update rooms"
+  ON room FOR UPDATE
+  USING (auth.uid() = host_id);
+
+-- Player policies
+CREATE POLICY "Players are viewable by room members"
+  ON player FOR SELECT
+  USING (room_id IN (
+    SELECT id FROM room
+    WHERE id = player.room_id
+  ));
+```
+
+### 2. Data Validation
+```sql
+-- Room constraints
+ALTER TABLE room
+  ADD CONSTRAINT valid_status
+  CHECK (status IN ('waiting', 'playing', 'finished'));
+
+-- Player constraints
+ALTER TABLE player
+  ADD CONSTRAINT valid_name
+  CHECK (length(name) >= 1 AND length(name) <= 50);
+```
+
+## Best Practices
+
+1. **Query Optimization**
+   - Use appropriate indexes
+   - Limit result sets
+   - Use efficient joins
+   - Cache frequent queries
+
+2. **Real-time Updates**
+   - Subscribe only to needed tables
+   - Handle reconnection
+   - Clean up subscriptions
+   - Handle race conditions
+
+3. **Data Integrity**
+   - Use transactions
+   - Validate data
+   - Handle errors
+   - Maintain consistency
+
+4. **Security**
+   - Use RLS policies
+   - Validate inputs
+   - Sanitize data
+   - Handle permissions
+
+5. **Performance**
+   - Monitor query performance
+   - Optimize indexes
+   - Use appropriate data types
+   - Handle large datasets
+
+## Error Handling
+
+### 1. Database Errors
+```typescript
+const handleDatabaseError = (error: PostgresError) => {
+  switch (error.code) {
+    case '23505': // Unique violation
+      return handleUniqueViolation(error);
+    case '23503': // Foreign key violation
+      return handleForeignKeyViolation(error);
+    default:
+      return handleGenericError(error);
+  }
+};
+```
+
+### 2. Connection Errors
+```typescript
+const handleConnectionError = (error: Error) => {
+  // Log error
+  // Attempt reconnection
+  // Show user message
+};
+```
+
+## Testing
+
+### 1. Database Tests
+```typescript
+describe('Database', () => {
+  test('creates room with valid data', async () => {
+    const room = await createRoom();
+    expect(room).toBeDefined();
+    expect(room.status).toBe('waiting');
+  });
+
+  test('enforces unique room codes', async () => {
+    const code = 'TEST123';
+    await createRoom({ code });
+    await expect(createRoom({ code })).rejects.toThrow();
+  });
+});
+```
+
+### 2. Real-time Tests
+```typescript
+describe('Real-time', () => {
+  test('receives room updates', async () => {
+    const subscription = subscribeToRoom(roomId);
+    await updateRoomStatus(roomId, 'playing');
+    expect(onRoomUpdate).toHaveBeenCalled();
+  });
+});
+```
+
+---
+
+**For more details, see:**
+- [Supabase Documentation](mdc:https:/supabase.com/docs)
+- [PostgreSQL Documentation](mdc:https:/www.postgresql.org/docs)
+- [Real-time Best Practices](mdc:https:/supabase.com/docs/guides/realtime)

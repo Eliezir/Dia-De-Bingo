@@ -1,0 +1,260 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Game Logic Rules
+
+## Game States
+
+### 1. Room Status
+```typescript
+type RoomStatus = 'waiting' | 'playing' | 'finished';
+
+interface RoomState {
+  status: RoomStatus;
+  drawnNumbers: number[];
+  currentNumber?: number;
+  winner?: Player;
+}
+```
+
+### 2. Player State
+```typescript
+interface PlayerState {
+  id: string;
+  name: string;
+  card: number[][];
+  markedNumbers: number[];
+  isHost: boolean;
+  hasWon: boolean;
+}
+```
+
+## Card Generation
+
+### 1. Card Structure
+```typescript
+interface BingoCard {
+  numbers: number[][];  // 5x5 grid
+  marked: boolean[][];  // 5x5 grid
+}
+```
+
+### 2. Generation Rules
+```typescript
+const generateCard = (): number[][] => {
+  // 1. Each column has specific number ranges
+  // B: 1-15
+  // I: 16-30
+  // N: 31-45 (with free space)
+  // G: 46-60
+  // O: 61-75
+  
+  // 2. Numbers must be unique
+  // 3. Free space in center (N column, row 3)
+  // 4. Return 5x5 grid
+}
+```
+
+## Number Drawing
+
+### 1. Drawing Rules
+```typescript
+const drawNumber = (drawnNumbers: number[]): number => {
+  // 1. Generate random number between 1-75
+  // 2. Check if number already drawn
+  // 3. Return new number
+}
+```
+
+### 2. Validation
+```typescript
+const validateDraw = (number: number, drawnNumbers: number[]): boolean => {
+  // 1. Check if number is in valid range (1-75)
+  // 2. Check if number already drawn
+  // 3. Return validation result
+}
+```
+
+## Win Validation
+
+### 1. Win Patterns
+```typescript
+type WinPattern = 
+  | 'horizontal'   // Any horizontal line
+  | 'vertical'     // Any vertical line
+  | 'diagonal'     // Either diagonal
+  | 'four-corners' // All four corners
+  | 'blackout';    // All numbers marked
+```
+
+### 2. Validation Logic
+```typescript
+const validateWin = (
+  card: number[][],
+  marked: boolean[][],
+  pattern: WinPattern
+): boolean => {
+  // 1. Check specific pattern
+  // 2. Verify all numbers in pattern are marked
+  // 3. Return validation result
+}
+```
+
+## Game Flow
+
+### 1. Start Game
+```typescript
+const startGame = async (roomId: string) => {
+  // 1. Validate room exists
+  // 2. Check if host
+  // 3. Generate cards for all players
+  // 4. Update room status to 'playing'
+}
+```
+
+### 2. End Game
+```typescript
+const endGame = async (roomId: string, winner: Player) => {
+  // 1. Validate room exists
+  // 2. Check if host
+  // 3. Update room status to 'finished'
+  // 4. Set winner
+}
+```
+
+### 3. Reset Game
+```typescript
+const resetGame = async (roomId: string) => {
+  // 1. Clear drawn numbers
+  // 2. Generate new cards
+  // 3. Reset player states
+  // 4. Set status to 'waiting'
+}
+```
+
+## Error Handling
+
+### 1. Game Errors
+```typescript
+type GameError = 
+  | 'INVALID_ROOM'
+  | 'NOT_HOST'
+  | 'GAME_IN_PROGRESS'
+  | 'INVALID_NUMBER'
+  | 'INVALID_CARD'
+  | 'INVALID_WIN';
+
+const handleGameError = (error: GameError) => {
+  // Handle specific game errors
+}
+```
+
+### 2. State Validation
+```typescript
+const validateGameState = (state: GameState): boolean => {
+  // Validate current game state
+  // Return true if valid
+}
+```
+
+## Performance
+
+### 1. Card Generation
+```typescript
+// Cache generated cards
+const cardCache = new Map<string, number[][]>();
+
+// Use memoization for card generation
+const generateCardMemoized = memoize(generateCard);
+```
+
+### 2. Win Validation
+```typescript
+// Optimize win validation
+const validateWinOptimized = (card: number[][], marked: boolean[][]) => {
+  // Use bitwise operations for faster validation
+}
+```
+
+## Testing
+
+### 1. Unit Tests
+```typescript
+describe('Game Logic', () => {
+  test('generates valid bingo card', () => {
+    const card = generateCard();
+    expect(validateCard(card)).toBe(true);
+  });
+
+  test('validates win correctly', () => {
+    const card = generateCard();
+    const marked = markWinningPattern(card);
+    expect(validateWin(card, marked)).toBe(true);
+  });
+});
+```
+
+### 2. Integration Tests
+```typescript
+describe('Game Flow', () => {
+  test('completes full game cycle', async () => {
+    const room = await createRoom();
+    await startGame(room.id);
+    // ... test game flow
+  });
+});
+```
+
+## Security
+
+### 1. Input Validation
+```typescript
+const validateInput = (input: unknown): boolean => {
+  // Validate all game inputs
+  // Prevent cheating
+}
+```
+
+### 2. State Verification
+```typescript
+const verifyGameState = (state: GameState): boolean => {
+  // Verify game state integrity
+  // Prevent state manipulation
+}
+```
+
+## Best Practices
+
+1. **Server Authority**
+   - All game logic runs on server
+   - Client only displays state
+   - Validate all client inputs
+
+2. **State Management**
+   - Use immutable state
+   - Implement state machine
+   - Handle edge cases
+
+3. **Error Handling**
+   - Graceful degradation
+   - User-friendly messages
+   - Proper error recovery
+
+4. **Performance**
+   - Optimize algorithms
+   - Cache results
+   - Minimize calculations
+
+5. **Testing**
+   - Comprehensive unit tests
+   - Integration tests
+   - Edge case coverage
+
+---
+
+**For more details, see:**
+- [Bingo Rules](mdc:https:/en.wikipedia.org/wiki/Bingo_(American_version))
+- [Game State Management](mdc:https:/gameprogrammingpatterns.com/state.html)
+- [Server Authority](mdc:https:/www.gamasutra.com/blogs/DaveMark/20111113/90665/Server_Authority.php)

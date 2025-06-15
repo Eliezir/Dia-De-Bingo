@@ -1,0 +1,179 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Code Organization Rules
+
+## Directory Structure
+
+```
+src/
+├── components/           # Reusable UI components
+│   ├── ui/              # shadcn/ui components
+│   ├── game/            # Game-specific components
+│   │   ├── bingo-card/  # Bingo card related components
+│   │   ├── number-draw/ # Number drawing components
+│   │   └── lobby/       # Lobby/waiting room components
+│   └── layout/          # Layout components
+├── features/            # Feature-specific code
+│   ├── room/           # Room management
+│   ├── player/         # Player management
+│   └── game/           # Game logic
+├── lib/                # Shared utilities
+│   ├── supabase/      # Supabase client and types
+│   ├── animations/    # Framer Motion animations
+│   └── utils/         # Helper functions
+├── hooks/              # Custom React hooks
+├── types/              # TypeScript type definitions
+└── routes/             # TanStack Router routes
+```
+
+## File Naming Conventions
+
+- **Components**: PascalCase
+  ```
+  BingoCard.tsx
+  NumberDraw.tsx
+  PlayerList.tsx
+  ```
+
+- **Hooks**: camelCase with 'use' prefix
+  ```
+  useRoomState.ts
+  useGameLogic.ts
+  usePlayerPresence.ts
+  ```
+
+- **Utilities**: camelCase
+  ```
+  generateBingoCard.ts
+  validateWin.ts
+  formatRoomCode.ts
+  ```
+
+- **Types**: PascalCase with 'Type' suffix
+  ```
+  RoomType.ts
+  PlayerType.ts
+  GameStateType.ts
+  ```
+
+## Component Organization
+
+1. **Component Structure**
+   ```tsx
+   // imports
+   import { type FC } from 'react'
+   import { motion } from 'framer-motion'
+   
+   // types
+   interface Props {
+     // props
+   }
+   
+   // component
+   export const ComponentName: FC<Props> = ({ prop1, prop2 }) => {
+     // hooks
+     // state
+     // handlers
+     // render
+   }
+   ```
+
+2. **Component Categories**
+   - **UI Components**: Pure presentational components
+   - **Container Components**: Handle data fetching and state
+   - **Layout Components**: Handle page structure
+   - **Feature Components**: Game-specific logic
+
+## Type Definitions
+
+1. **Location**: All types should be in `src/types/`
+2. **Organization**:
+   - `game.types.ts`: Game-related types
+   - `room.types.ts`: Room-related types
+   - `player.types.ts`: Player-related types
+   - `api.types.ts`: API response types
+
+3. **Naming**:
+   - Interfaces: `I` prefix (e.g., `IRoom`)
+   - Types: No prefix (e.g., `GameState`)
+   - Enums: PascalCase (e.g., `RoomStatus`)
+
+## Import Order
+
+1. React and framework imports
+2. Third-party libraries
+3. Components
+4. Hooks
+5. Utils
+6. Types
+7. Styles
+
+## Code Splitting
+
+1. **Route-based**: Each route should be lazy-loaded
+2. **Feature-based**: Large features should be code-split
+3. **Component-based**: Large components should be lazy-loaded
+
+## State Management
+
+1. **Local State**: Use `useState` for component-level state
+2. **Shared State**: Use TanStack Query for server state
+3. **Real-time State**: Use Supabase Realtime subscriptions
+4. **Form State**: Use React Hook Form
+
+## Error Boundaries
+
+1. Each major feature should have its own error boundary
+2. Error boundaries should be placed at the route level
+3. Error boundaries should provide meaningful fallback UI
+
+## Testing Organization
+
+1. **Location**: `__tests__` directory next to the file being tested
+2. **Naming**: `ComponentName.test.tsx`
+3. **Structure**: Arrange, Act, Assert pattern
+
+## Documentation
+
+1. **Component Documentation**:
+   ```tsx
+   /**
+    * @component BingoCard
+    * @description Displays a bingo card with numbers
+    * @param {number[]} numbers - The numbers on the card
+    * @param {boolean} isMarked - Whether the card is marked
+    */
+   ```
+
+2. **Function Documentation**:
+   ```ts
+   /**
+    * @function generateBingoCard
+    * @description Generates a unique bingo card
+    * @returns {number[]} Array of numbers for the card
+    */
+   ```
+
+## Best Practices
+
+1. **Keep components small and focused**
+2. **Use TypeScript strictly**
+3. **Follow the Single Responsibility Principle**
+4. **Use meaningful variable and function names**
+5. **Comment complex logic**
+6. **Keep the component tree shallow**
+7. **Use proper error handling**
+8. **Implement proper loading states**
+9. **Use proper TypeScript types**
+10. **Follow React best practices**
+
+---
+
+**For more details, see:**
+- [React Documentation](mdc:https:/react.dev)
+- [TypeScript Documentation](mdc:https:/www.typescriptlang.org/docs)
+- [TanStack Start Documentation](mdc:https:/tanstack.com/start)
+- [shadcn/ui Documentation](mdc:https:/ui.shadcn.com)
