@@ -10,7 +10,7 @@ alwaysApply: true
 ### 1. Basic Animations
 ```typescript
 // src/components/ui/animated-card.tsx
-import { motion } from 'framer-motion'
+import { motion } from 'motion'
 
 export const AnimatedCard = ({ children }: { children: React.ReactNode }) => {
   return (
@@ -29,7 +29,7 @@ export const AnimatedCard = ({ children }: { children: React.ReactNode }) => {
 ### 2. Number Draw Animation
 ```typescript
 // src/components/game/number-draw.tsx
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence } from 'motion'
 
 export const NumberDraw = ({ number }: { number: number }) => {
   return (
@@ -58,7 +58,7 @@ export const NumberDraw = ({ number }: { number: number }) => {
 ### 1. Page Wrapper
 ```typescript
 // src/components/layout/page-transition.tsx
-import { motion } from 'framer-motion'
+import { motion } from 'motion'
 
 const pageVariants = {
   initial: {
@@ -93,7 +93,7 @@ export const PageTransition = ({ children }: { children: React.ReactNode }) => {
 ### 2. Route Transitions
 ```typescript
 // src/app/layout.tsx
-import { AnimatePresence } from 'framer-motion'
+import { AnimatePresence } from 'motion'
 
 export default function RootLayout({
   children
@@ -113,7 +113,7 @@ export default function RootLayout({
 ### 1. Bingo Card Cell
 ```typescript
 // src/components/game/bingo-cell.tsx
-import { motion } from 'framer-motion'
+import { motion } from 'motion'
 
 export const BingoCell = ({
   number,
@@ -147,7 +147,7 @@ export const BingoCell = ({
 ### 2. Win Celebration
 ```typescript
 // src/components/game/win-celebration.tsx
-import { motion } from 'framer-motion'
+import { motion } from 'motion'
 
 const confettiVariants = {
   initial: { y: -100, opacity: 0 },
@@ -190,7 +190,7 @@ export const WinCelebration = () => {
 ### 1. Swipe Actions
 ```typescript
 // src/components/game/swipe-card.tsx
-import { motion, useDragControls } from 'framer-motion'
+import { motion, useDragControls } from 'motion'
 
 export const SwipeCard = ({ children }: { children: React.ReactNode }) => {
   const dragControls = useDragControls()
@@ -216,7 +216,7 @@ export const SwipeCard = ({ children }: { children: React.ReactNode }) => {
 ### 2. Pull to Refresh
 ```typescript
 // src/components/ui/pull-to-refresh.tsx
-import { motion, useMotionValue, useTransform } from 'framer-motion'
+import { motion, useMotionValue, useTransform } from 'motion'
 
 export const PullToRefresh = ({
   onRefresh,
@@ -257,7 +257,7 @@ export const PullToRefresh = ({
 ```typescript
 // src/hooks/use-animation.ts
 import { useCallback } from 'react'
-import { useAnimationControls } from 'framer-motion'
+import { useAnimationControls } from 'motion'
 
 export const useAnimation = () => {
   const controls = useAnimationControls()
@@ -280,7 +280,7 @@ export const useAnimation = () => {
 ```typescript
 // src/components/game/lazy-animation.tsx
 import { lazy, Suspense } from 'react'
-import { motion } from 'framer-motion'
+import { motion } from 'motion'
 
 const LazyWinCelebration = lazy(() => import('./win-celebration'))
 
@@ -338,7 +338,7 @@ export const LazyAnimation = () => {
 ### 1. Micro-interactions
 ```typescript
 // src/components/ui/micro-interaction.tsx
-import { motion } from 'framer-motion'
+import { motion } from 'motion'
 
 export const MicroInteraction = () => {
   return (
@@ -362,7 +362,7 @@ export const MicroInteraction = () => {
 ### 2. Loading States
 ```typescript
 // src/components/ui/loading.tsx
-import { motion } from 'framer-motion'
+import { motion } from 'motion'
 
 export const Loading = () => {
   return (
@@ -389,6 +389,5 @@ export const Loading = () => {
 ---
 
 **For more details, see:**
-- [Framer Motion Documentation](mdc:https:/www.framer.com/motion)
-- [Animation Best Practices](mdc:https:/www.framer.com/motion/best-practices)
+- [Motion Documentation](mdc:https:/motion.dev)
 - [Web Animation API](mdc:https:/developer.mozilla.org/en-US/docs/Web/API/Web_Animations_API)
