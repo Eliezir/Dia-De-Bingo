@@ -50,7 +50,7 @@ export function CreateRoomDialog() {
                 <div className="flex flex-col md:flex-row items-center">
                     <div className="hidden md:flex w-1/2 rounded-l-lg p-8 flex-col items-center justify-center relative overflow-hidden">
                         <img 
-                            src={`/create-room-img.svg?t=${imageTimestamp}`}
+                            src={`/create-room.svg?t=${imageTimestamp}`}
                             alt="Create Room Illustration" 
                             className="w-full h-auto"
                         />
@@ -78,15 +78,15 @@ export function CreateRoomDialog() {
                                 <Label>Regras do Jogo</Label>
                                 <div className="grid gap-2 text-sm text-muted-foreground">
                                     <div className="flex items-center gap-2">
-                                        <Icon icon="mdi:check-circle" className="w-5 h-5 text-blue-500" />
+                                        <div  className="w-2 h-2 bg-blue-200 rounded-full" />
                                         <span>Números de 1 a 90</span>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <Icon icon="mdi:check-circle" className="w-5 h-5 text-blue-500" />
+                                        <div  className="w-2 h-2 bg-blue-200 rounded-full" />
                                         <span>Cartela com 25 números</span>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <Icon icon="mdi:check-circle" className="w-5 h-5 text-blue-500" />
+                                        <div  className="w-2 h-2 bg-blue-200 rounded-full" />
                                         <span>Vitória em linha, coluna ou diagonal, você que decide!</span>
                                     </div>
                                 </div>
