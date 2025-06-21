@@ -20,6 +20,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const [initialLoad, setInitialLoad] = useState(true)
 
   useEffect(() => {
     const getInitialSession = async () => {
@@ -27,21 +28,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session)
       setUser(session?.user ?? null)
       setLoading(false)
+      setInitialLoad(false)
     }
 
     getInitialSession()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (_event, session) => {
         setSession(session)
         setUser(session?.user ?? null)
         setLoading(false)
-
-        if (event === 'SIGNED_IN') {
-          toast.success('Login realizado com sucesso!')
-        } else if (event === 'SIGNED_OUT') {
-          toast.success('Logout realizado com sucesso!')
-        }
       }
     )
 
@@ -53,6 +49,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email,
       password,
     })
+    if (!error) {
+      toast.success('Login realizado com sucesso!')
+    }
     return { error }
   }
 
@@ -69,7 +68,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    await supabase.auth.signOut()
+    const { error } = await supabase.auth.signOut()
+    if (!error) {
+      toast.success('Logout realizado com sucesso!')
+    }
   }
 
   const resetPassword = async (email: string) => {
