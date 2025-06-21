@@ -6,6 +6,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '~/components/ui/dialog'
 import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
@@ -129,7 +130,11 @@ export function CreateRoomDialog({ children }: CreateRoomDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange} modal={true}>
-      {children}
+      <DialogTrigger asChild>
+        <Button className="w-full mb-4" size="lg">
+          Criar Nova Sala
+        </Button>
+      </DialogTrigger>
       <DialogContent className="w-[90%] md:w-[800px] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
         <div className="flex flex-col md:flex-row items-center">
           <div className="hidden md:flex w-1/2 rounded-l-lg p-8 flex-col items-center justify-center relative overflow-hidden">

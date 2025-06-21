@@ -1,4 +1,3 @@
-import { Button } from '~/components/ui/button'
 import { Icon } from '@iconify/react'
 import { motion } from 'motion/react'
 import { CreateRoomDialog } from './CreateRoomDialog'
