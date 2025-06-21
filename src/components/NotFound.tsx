@@ -36,6 +36,18 @@ export function NotFound() {
     }
   }
 
+  // Use stable positions to avoid hydration mismatch
+  const particlePositions = [
+    { left: '5%', top: '15%' },
+    { left: '25%', top: '85%' },
+    { left: '45%', top: '25%' },
+    { left: '65%', top: '75%' },
+    { left: '85%', top: '35%' },
+    { left: '15%', top: '65%' },
+    { left: '35%', top: '45%' },
+    { left: '55%', top: '95%' },
+  ]
+
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-[#3c95f1] to-[#c3def9] overflow-hidden">
       <div
@@ -48,23 +60,20 @@ export function NotFound() {
       />
 
       <div className="absolute inset-0 overflow-hidden">
-        {Array.from({ length: 8 }).map((_, i) => (
+        {particlePositions.map((pos, i) => (
           <motion.div
             key={i}
             className="absolute w-4 h-4 bg-white rounded-full opacity-20"
             animate={{
               y: [0, -20, 0],
-              x: [0, Math.random() * 20 - 10, 0],
+              x: [0, (i % 2 === 0 ? 10 : -10), 0],
             }}
             transition={{
-              duration: 3 + Math.random() * 2,
+              duration: 3 + (i * 0.5),
               repeat: Infinity,
-              delay: Math.random() * 2,
+              delay: i * 0.3,
             }}
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-            }}
+            style={pos}
           />
         ))}
       </div>
@@ -129,7 +138,7 @@ export function NotFound() {
                 {i === 12 ? (
                   <Icon icon="material-symbols:star" className="text-yellow-300" />
                 ) : (
-                  Math.floor(Math.random() * 90) + 1
+                  ((i % 5) * 15) + Math.floor(i / 5) + 1
                 )}
               </motion.div>
             ))}

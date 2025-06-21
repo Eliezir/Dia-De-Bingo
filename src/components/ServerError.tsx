@@ -36,7 +36,21 @@ export function ServerError() {
     }
   }
 
-
+  // Use stable positions to avoid hydration mismatch
+  const particlePositions = [
+    { left: '10%' },
+    { left: '20%' },
+    { left: '30%' },
+    { left: '40%' },
+    { left: '50%' },
+    { left: '60%' },
+    { left: '70%' },
+    { left: '80%' },
+    { left: '90%' },
+    { left: '15%' },
+    { left: '25%' },
+    { left: '35%' },
+  ]
 
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-[#3c95f1] to-[#c3def9] overflow-hidden">
@@ -50,22 +64,20 @@ export function ServerError() {
       />
 
       <div className="absolute inset-0 overflow-hidden">
-        {Array.from({ length: 12 }).map((_, i) => (
+        {particlePositions.map((pos, i) => (
           <motion.div
             key={i}
             className="absolute w-3 h-3 bg-white rounded-full opacity-30"
             animate={{
-              y: [-50, window.innerHeight + 50],
-              x: [0, Math.random() * 100 - 50],
+              y: [-50, 1000],
+              x: [0, (i % 3 === 0 ? 20 : i % 3 === 1 ? -20 : 0)],
             }}
             transition={{
-              duration: 4 + Math.random() * 3,
+              duration: 4 + (i * 0.3),
               repeat: Infinity,
-              delay: Math.random() * 3,
+              delay: i * 0.4,
             }}
-            style={{
-              left: `${Math.random() * 100}%`,
-            }}
+            style={pos}
           />
         ))}
       </div>
