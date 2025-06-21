@@ -1,0 +1,134 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { supabase } from '~/lib/supabase/client'
+import { toast } from 'sonner'
+import type { Player, Room } from '~/types/game'
+
+interface CreateRoomRequest {
+  name: string
+}
+
+interface CreateRoomResponse {
+  data: Room[]
+}
+
+export const roomKeys = {
+  all: ['rooms'] as const,
+  details: () => [...roomKeys.all, 'detail'] as const,
+  detail: (id: string) => [...roomKeys.details(), id] as const,
+}
+
+const createRoomFn = async (request: CreateRoomRequest): Promise<Room> => {
+  // Get the current session
+  const { data: { session } } = await supabase.auth.getSession()
+  
+  if (!session) {
+    throw new Error('You must be logged in to create a room')
+  }
+
+  const { data, error } = await supabase.functions.invoke('create-room', {
+    body: request,
+    headers: {
+      Authorization: `Bearer ${session.access_token}`
+    }
+  })
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  // Return the first room from the response
+  const room = data?.data?.[0]
+  if (!room) {
+    throw new Error('No room data returned')
+  }
+
+  return room
+}
+
+const getRoomByCodeFn = async (code: string): Promise<Room> => {
+  const { data, error } = await supabase
+    .from('room')
+    .select('*')
+    .eq('code', code)
+    .single()
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  return data
+}
+
+export const useCreateRoom = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: createRoomFn,
+    onSuccess: (room) => {
+      toast.success(`Sala "${room.name}" criada! Código: ${room.code}`)
+      queryClient.invalidateQueries({ queryKey: roomKeys.all })
+      queryClient.setQueryData(roomKeys.detail(room.code), room)
+    },
+    onError: (error: Error) => {
+      toast.error(`Falha ao criar sala: ${error.message}`)
+      console.error('Error creating room:', error)
+    },
+  })
+}
+
+export const useJoinRoom = () => {
+  return useMutation({
+    mutationFn: async ({ roomCode, name }: { roomCode: string; name: string }): Promise<Player> => {
+      const { data, error } = await supabase.functions.invoke('join-room', {
+        body: { roomCode, name },
+      })
+
+      if (error) {
+        throw new Error(error.message)
+      }
+
+      return data
+    },
+    onSuccess: (data) => {
+      toast.success(`Bem-vindo à sala, ${data.name}!`)
+    },
+    onError: (error: Error) => {
+      toast.error(`Falha ao entrar na sala: ${error.message}`)
+      console.error('Error joining room:', error)
+    },
+  })
+}
+
+export const useRoom = (code: string) => {
+  return useQuery({
+    queryKey: roomKeys.detail(code),
+    queryFn: () => getRoomByCodeFn(code),
+    enabled: !!code, // Only run query if code is provided
+    retry: 1,
+  })
+}
+
+export const useUpdateRoomStatus = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ roomId, status }: { roomId: number; status: string }) => {
+      const { data, error } = await supabase
+        .from('room')
+        .update({ status })
+        .eq('id', roomId)
+        .select()
+        .single()
+
+      if (error) throw new Error(error.message)
+      return data
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(roomKeys.detail(data.code), data)
+      toast.success('Status da sala atualizado')
+    },
+    onError: (error: Error) => {
+      toast.error(`Erro ao atualizar sala: ${error.message}`)
+    },
+  })
+} 

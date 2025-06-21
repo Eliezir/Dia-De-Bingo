@@ -5,11 +5,31 @@ alwaysApply: true
 ---
 # Edge Functions Rules
 
+## Important: Edge Functions Management
+
+**All edge functions are managed through the Supabase Admin Panel, not through local files.**
+
+### 1. Accessing Edge Functions
+- Go to your Supabase project dashboard
+- Navigate to "Edge Functions" in the left sidebar
+- All functions are created, edited, and deployed through the web interface
+
+### 2. Function Development Workflow
+1. **Create Function**: Use the "New Function" button in the admin panel
+2. **Edit Function**: Click on the function name to open the code editor
+3. **Test Function**: Use the "Invoke" button to test with sample data
+4. **Deploy Function**: Changes are automatically saved and deployed
+
+### 3. Local Development
+- The `supabase/functions/` directory in this project is for reference only
+- Functions are not deployed from local files
+- Use the admin panel for all function management
+
 ## Function Structure
 
 ### 1. Basic Structure
 ```typescript
-// /supabase/functions/example/index.ts
+// Example function structure for admin panel
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -69,7 +89,7 @@ const handleRequest = async (req: Request, supabase: SupabaseClient) => {
 
 ### 1. Room Management
 ```typescript
-// /supabase/functions/room/index.ts
+// Example: create-room function
 const handleCreateRoom = async (body: CreateRoomRequest, supabase: SupabaseClient) => {
   // Validate input
   if (!body.name) {
@@ -93,7 +113,7 @@ const handleCreateRoom = async (body: CreateRoomRequest, supabase: SupabaseClien
 
 ### 2. Game Logic
 ```typescript
-// /supabase/functions/game/index.ts
+// Example: draw-number function
 const handleDrawNumber = async (body: DrawNumberRequest, supabase: SupabaseClient) => {
   // Validate room
   const { data: room } = await supabase
@@ -231,9 +251,15 @@ const checkRateLimit = (key: string, limit: number, window: number) => {
 
 ## Testing
 
-### 1. Unit Tests
+### 1. Admin Panel Testing
+- Use the "Invoke" button in the admin panel
+- Test with sample request data
+- Check response format and status codes
+- Monitor function logs for errors
+
+### 2. Unit Tests (Reference Only)
 ```typescript
-// /supabase/functions/__tests__/room.test.ts
+// Example test structure (for reference)
 import { assertEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts'
 import { handleCreateRoom } from '../room/index.ts'
 
@@ -257,32 +283,6 @@ Deno.test('create room', async () => {
   )
 
   assertEquals(result.data.name, 'Test Room')
-})
-```
-
-### 2. Integration Tests
-```typescript
-// /supabase/functions/__tests__/integration.test.ts
-import { serve } from '../example/index.ts'
-
-Deno.test('create room endpoint', async () => {
-  const req = new Request('http://localhost:54321/functions/v1/room', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer test-token'
-    },
-    body: JSON.stringify({
-      type: 'create_room',
-      name: 'Test Room'
-    })
-  })
-
-  const res = await serve(req)
-  const data = await res.json()
-
-  assertEquals(res.status, 200)
-  assertEquals(data.data.name, 'Test Room')
 })
 ```
 
@@ -313,35 +313,43 @@ Deno.test('create room endpoint', async () => {
    - Monitor execution time
 
 5. **Testing**
-   - Write unit tests
-   - Write integration tests
+   - Test in admin panel before deployment
    - Test error cases
-   - Mock external services
+   - Monitor function logs
+   - Use proper test data
 
 ## Deployment
 
-### 1. Configuration
-```toml
-# /supabase/config.toml
-[functions]
-  [functions.room]
-    verify_jwt = true
-    rate_limit = 100
-    rate_limit_window = 60
-```
+### 1. Admin Panel Deployment
+- Functions are automatically deployed when saved
+- No manual deployment process required
+- Monitor deployment status in the admin panel
 
-### 2. Deployment Script
-```bash
-#!/bin/bash
-# /supabase/deploy.sh
+### 2. Environment Variables
+- Set environment variables in the admin panel
+- Use the "Settings" tab for function configuration
+- Access via `Deno.env.get('VARIABLE_NAME')`
 
-# Deploy functions
-supabase functions deploy room
-supabase functions deploy game
+### 3. Function Configuration
+- Configure JWT verification in function settings
+- Set rate limits through admin panel
+- Monitor function usage and performance
 
-# Set secrets
-supabase secrets set --env production
-```
+## Current Functions
+
+### 1. create-room
+- **Purpose**: Creates a new bingo room
+- **Method**: POST
+- **Authentication**: Required
+- **Input**: `{ name: string }`
+- **Output**: `{ data: Room[], message: string }`
+
+### 2. Future Functions (to be added)
+- `join-room`: Join an existing room
+- `draw-number`: Draw a number for the game
+- `mark-number`: Mark a number on player's card
+- `check-win`: Validate win conditions
+- `end-game`: End the current game
 
 ---
 
@@ -349,3 +357,4 @@ supabase secrets set --env production
 - [Supabase Edge Functions Documentation](mdc:https:/supabase.com/docs/guides/functions)
 - [Deno Documentation](mdc:https:/deno.land/manual)
 - [Edge Functions Best Practices](mdc:https:/supabase.com/docs/guides/functions/best-practices)
+- [Supabase Admin Panel](mdc:https:/supabase.com/dashboard)
