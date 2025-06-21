@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { motion } from 'framer-motion'
 import { Icon } from '@iconify/react'
 
-export function NotFound() {
+export function ServerError() {
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -36,6 +36,8 @@ export function NotFound() {
     }
   }
 
+
+
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-[#3c95f1] to-[#c3def9] overflow-hidden">
       <div
@@ -48,22 +50,21 @@ export function NotFound() {
       />
 
       <div className="absolute inset-0 overflow-hidden">
-        {Array.from({ length: 8 }).map((_, i) => (
+        {Array.from({ length: 12 }).map((_, i) => (
           <motion.div
             key={i}
-            className="absolute w-4 h-4 bg-white rounded-full opacity-20"
+            className="absolute w-3 h-3 bg-white rounded-full opacity-30"
             animate={{
-              y: [0, -20, 0],
-              x: [0, Math.random() * 20 - 10, 0],
+              y: [-50, window.innerHeight + 50],
+              x: [0, Math.random() * 100 - 50],
             }}
             transition={{
-              duration: 3 + Math.random() * 2,
+              duration: 4 + Math.random() * 3,
               repeat: Infinity,
-              delay: Math.random() * 2,
+              delay: Math.random() * 3,
             }}
             style={{
               left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
             }}
           />
         ))}
@@ -80,74 +81,61 @@ export function NotFound() {
             className="text-8xl md:text-9xl font-bold text-white drop-shadow-lg"
             variants={numberVariants}
           >
-            4
+            5
           </motion.div>
           <motion.div
             className="flex items-center justify-center"
             variants={numberVariants}
             transition={{ delay: 0.1 }}
           >
-            <div className="overflow-hidden">
-              <img
-                src="/404.png"
-                alt="404"
-                className="w-24 h-24 md:w-32 md:h-32"
-              />
-            </div>
+            <img 
+              src="/error-500/icon.png" 
+              alt="0" 
+              className="w-24 h-24 md:w-32 md:h-32 drop-shadow-lg"
+            />
           </motion.div>
           <motion.div
             className="text-8xl md:text-9xl font-bold text-white drop-shadow-lg"
             variants={numberVariants}
             transition={{ delay: 0.2 }}
           >
-            4
+            0
           </motion.div>
         </motion.div>
 
         <motion.div className="max-w-2xl mb-8" variants={itemVariants}>
           <h1 className="text-3xl md:text-4xl font-bold text-white mb-4 drop-shadow-lg">
-            Ops! Número não encontrado
+            Ops! Algo deu errado no servidor
           </h1>
           <p className="text-lg md:text-xl text-blue-100 mb-6 leading-relaxed">
-            Parece que este número não está na nossa cartela de bingo.
-            Que tal tentarmos um número diferente?
+            Parece que o nosso gerador de números do bingo está com problemas técnicos. 
+            Nossa equipe já foi notificada e está trabalhando para resolver!
           </p>
         </motion.div>
 
-        <motion.div
+        <motion.div 
           className="mb-8 p-6 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20"
           variants={itemVariants}
         >
-          <div className="grid grid-cols-5 gap-2 mb-4">
-            {Array.from({ length: 25 }).map((_, i) => (
-              <motion.div
-                key={i}
-                className="w-8 h-8 md:w-12 md:h-12 bg-white/20 rounded-lg flex items-center justify-center text-sm md:text-base font-bold text-white"
-                whileHover={{ scale: 1.1 }}
-                transition={{ delay: i * 0.02 }}
-              >
-                {i === 12 ? (
-                  <Icon icon="material-symbols:star" className="text-yellow-300" />
-                ) : (
-                  Math.floor(Math.random() * 90) + 1
-                )}
-              </motion.div>
-            ))}
-          </div>
-          <p className="text-sm text-white">
-            Nossa cartela tem 25 números, mas este não é um deles!
+          <img 
+            src="/error-500/image.svg" 
+            alt="Ilustração de Erro do Servidor" 
+            className="w-64 h-64 md:w-72 md:h-72 mx-auto"
+          />
+          <p className="mt-4 text-sm text-white">
+            Estamos com um problema técnico, mas já estamos trabalhando nisso!
           </p>
         </motion.div>
 
         <motion.div className="flex flex-col sm:flex-row gap-4" variants={itemVariants}>
           <motion.button
-            onClick={() => window.history.back()}
+            onClick={() => window.location.reload()}
             className="px-8 py-3 bg-white/20 backdrop-blur-sm text-white font-semibold rounded-full border border-white/30 hover:bg-white/30 transition-all duration-300 flex items-center gap-2"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <Icon icon="material-symbols:arrow-back" />
-            Voltar
+            <Icon icon="material-symbols:refresh" />
+            Tentar Novamente
           </motion.button>
           <motion.div
             whileHover={{ scale: 1.05 }}
@@ -163,16 +151,26 @@ export function NotFound() {
           </motion.div>
         </motion.div>
 
-        <motion.div
+        <motion.div 
           className="mt-12 p-4 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 max-w-md"
           variants={itemVariants}
         >
           <p className="text-sm text-white">
-            <Icon icon="material-symbols:lightbulb" className="inline mr-2 text-yellow-300" />
-            <strong>Sabia?</strong> O bingo foi inventado na Itália em 1530 e chegou ao Brasil em 1960!
+            <Icon icon="material-symbols:engineering" className="inline mr-2 text-yellow-300" />
+            <strong>Status:</strong> Nossa equipe técnica está trabalhando para resolver o problema o mais rápido possível!
+          </p>
+        </motion.div>
+
+        <motion.div 
+          className="mt-6 p-4 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 max-w-md"
+          variants={itemVariants}
+        >
+          <p className="text-sm text-white">
+            <Icon icon="material-symbols:support-agent" className="inline mr-2 text-green-300" />
+            Se o problema persistir, entre em contato conosco
           </p>
         </motion.div>
       </motion.div>
     </div>
   )
-}
+} 
