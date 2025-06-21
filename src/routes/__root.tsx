@@ -13,6 +13,8 @@ import * as React from 'react'
 import appCss from '../styles/app.css?url'
 import { seo } from '../utils/seo'
 import { queryClient } from '~/lib/query-client'
+import { Toaster } from "~/components/ui/sonner"
+import { AuthProvider } from '~/lib/auth/auth-context'
 
 export const Route = createRootRoute({
   head: () => ({
@@ -45,9 +47,12 @@ export const Route = createRootRoute({
 function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
-      <RootDocument>
-        <Outlet />
-      </RootDocument>
+      <AuthProvider>
+        <RootDocument>
+          <Outlet />
+          <Toaster />
+        </RootDocument>
+      </AuthProvider>
     </QueryClientProvider>
   )
 }

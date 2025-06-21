@@ -1,7 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { HomeHero } from '~/components/home/HomeHero'
 import { GettingStarted } from '~/components/home/GettingStarted'
-import { motion } from "motion/react";
 import { useRef, useEffect, useState } from "react";
 
 export const Route = createFileRoute('/')({
@@ -26,7 +25,7 @@ function Home() {
       <section className="snap-start min-h-screen">
         <HomeHero />
       </section>
-      <section className="snap-start bg-white"  id="getting-started">
+      <section className="snap-start bg-white" id="getting-started">
         <GettingStarted />
       </section>
     </div>

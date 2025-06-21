@@ -177,4 +177,7 @@
   body {
     @apply bg-background text-foreground;
   }
+  .gradient-bg {
+    @apply bg-gradient-to-br from-[#3c95f1] to-[#c3def9];
+  }
 }

@@ -1,0 +1,44 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+# No Unnecessary Comments
+
+## Rule
+Avoid adding comments to the code that are obvious or simply restate what the code does. Comments should only be used to explain complex logic, non-trivial decisions, or "why" something is done a certain way, not "what" it does.
+
+## Rationale
+Clean, self-documenting code is easier to read and maintain. Unnecessary comments add clutter and can become outdated, leading to confusion.
+
+## Examples
+
+### Bad: Obvious Comments
+```typescript
+// Create a new state variable for loading
+const [isLoading, setIsLoading] = useState(false);
+
+// Handle the button click
+const handleClick = () => {
+  // Set loading to true
+  setIsLoading(true);
+}
+```
+
+### Good: Explaining Complex Logic or Rationale
+```typescript
+// We use a debounce here to prevent excessive API calls while the user is typing.
+const debouncedSearch = debounce((query) => {
+  search(query);
+}, 300);
+
+// The `imageTimestamp` is used to force-refresh the SVG image cache in some browsers.
+// This ensures the illustration updates correctly when the dialog is reopened.
+const [imageTimestamp, setImageTimestamp] = useState(Date.now());
+```
+
+## Best Practices
+- Write self-documenting code with clear variable and function names.
+- If a piece of code is so complex it needs a comment to explain *what* it does, consider refactoring it to be simpler.
+- Use comments to explain the "why", not the "what".
+- JSDoc comments for functions and components are acceptable and encouraged for documenting props and purpose.
