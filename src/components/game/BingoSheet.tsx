@@ -80,7 +80,7 @@ export const BingoSheet = ({
                   'aspect-square rounded-lg border-2 font-bold text-lg transition-all duration-200',
                   'focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-transparent',
                   {
-                    'cursor-pointer hover:bg-white/20': !readOnly,
+                    'cursor-pointer': !readOnly,
                     'cursor-default': readOnly,
                     'bg-green-500 text-white border-green-400 shadow-lg': isMarked,
                     'bg-gray-100 border-gray-300 text-gray-700 hover:border-gray-400': !isMarked && isAdminMode,
