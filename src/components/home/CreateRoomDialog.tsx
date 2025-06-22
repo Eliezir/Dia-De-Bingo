@@ -17,7 +17,7 @@ import { useCreateRoom } from '~/hooks/useRoom'
 
 
 interface CreateRoomDialogProps {
-  children: React.ReactNode
+  children?: React.ReactNode
 }
 
 interface DialogFormContentProps {
@@ -127,7 +127,7 @@ const DialogFormContent = ({ roomName, setRoomName, setOpen }: DialogFormContent
   )
 }
 
-export function CreateRoomDialog({ children }: CreateRoomDialogProps) {
+export function CreateRoomDialog({ children }: CreateRoomDialogProps = {}) {
   const [open, setOpen] = useState(false)
   const [roomName, setRoomName] = useState('')
   const [imageTimestamp, setImageTimestamp] = useState(Date.now())
