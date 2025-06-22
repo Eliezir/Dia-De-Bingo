@@ -24,7 +24,7 @@ function GameOverPage() {
 
   if (error || !room) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-[#3c95f1] to-[#c3def9] flex items-center justify-center">
         <div className="text-center text-white">
           <h1 className="text-2xl font-bold mb-4">Sala não encontrada</h1>
           <p>O código da sala pode estar incorreto ou a sala foi removida.</p>

@@ -10,7 +10,7 @@ interface GameOverProps {
 
 export function GameOver({ roomName, winner }: GameOverProps) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-[#3c95f1] to-[#c3def9] flex items-center justify-center p-4">
       <Card className="w-full max-w-2xl bg-white/10 backdrop-blur-sm border-white/20">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4">

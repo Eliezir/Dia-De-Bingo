@@ -337,16 +337,20 @@ export function GameAdmin({ room }: GameAdminProps) {
             <CardContent className="text-center">
               <div className="mb-6">
                 <motion.div
+                  key={isRouletteSpinning ? 'spinning' : 'stopped'}
                   className="text-8xl font-bold text-white bg-white/20 rounded-2xl p-8 inline-block min-w-[200px]"
                   animate={isRouletteSpinning ? { 
                     scale: [1, 1.1, 1],
-                    rotate: [0, 360]
-                  } : {}}
+                    rotate: [0, 360, 0]
+                  } : { rotate: 0 }}
                   transition={isRouletteSpinning ? {
                     duration: 0.5,
                     repeat: Infinity,
                     ease: "easeInOut"
-                  } : {}}
+                  } : {
+                    duration: 0.3,
+                    ease: "easeOut"
+                  }}
                 >
                   {rouletteNumber || '?'}
                 </motion.div>

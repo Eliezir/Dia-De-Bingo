@@ -14,7 +14,7 @@ import { GameOver } from '~/components/game/GameOver'
 import { JoinRoomForm } from '~/components/game/JoinRoomForm'
 import { LoadingScreen } from '~/components/game/LoadingScreen'
 import type { Player, Room } from '~/types/game'
-import { savePlayerToStorage, getPlayerFromStorage } from '~/utils/playerStorage'
+import { savePlayerToStorage, getPlayerFromStorage, clearMarkedNumbersStorage } from '~/utils/playerStorage'
 
 export const Route = createFileRoute('/room/$roomCode')({
   component: RoomPage,
@@ -55,15 +55,19 @@ function RoomPage() {
         setGameFinished(true)
         setGameStarted(false)
         // Clear localStorage when game is finished
-        localStorage.removeItem(`markedNumbers_${roomCode}`)
+        if (currentPlayer) {
+          clearMarkedNumbersStorage(roomCode, currentPlayer.id)
+        }
       } else {
         setGameStarted(false)
         setGameFinished(false)
         // Clear localStorage when returning to waiting room
-        localStorage.removeItem(`markedNumbers_${roomCode}`)
+        if (currentPlayer) {
+          clearMarkedNumbersStorage(roomCode, currentPlayer.id)
+        }
       }
     }
-  }, [room, roomCode])
+  }, [room, roomCode, currentPlayer])
 
   // Real-time subscription to room status changes
   useEffect(() => {
@@ -89,13 +93,17 @@ function RoomPage() {
             setGameStarted(false)
             setGameFinished(false)
             // Clear localStorage when returning to waiting room
-            localStorage.removeItem(`markedNumbers_${roomCode}`)
+            if (currentPlayer) {
+              clearMarkedNumbersStorage(roomCode, currentPlayer.id)
+            }
             toast.info('Voltando à sala de espera')
           } else if (updatedRoom.status === 'finished' && !gameFinished) {
             setGameFinished(true)
             setGameStarted(false)
             // Clear localStorage when game is finished
-            localStorage.removeItem(`markedNumbers_${roomCode}`)
+            if (currentPlayer) {
+              clearMarkedNumbersStorage(roomCode, currentPlayer.id)
+            }
             toast.info('O jogo foi finalizado')
           }
         }
@@ -105,7 +113,7 @@ function RoomPage() {
     return () => {
       channel.unsubscribe()
     }
-  }, [room?.id, roomCode])
+  }, [room?.id, roomCode, currentPlayer])
   
   const handleJoin = (player: Player) => {
     setCurrentPlayer(player)
