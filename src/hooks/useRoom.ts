@@ -87,7 +87,7 @@ export const useJoinRoom = () => {
         throw new Error(error.message)
       }
 
-      return data
+      return data.player || data
     },
     onSuccess: (data) => {
       toast.success(`Bem-vindo à sala, ${data.name}!`)

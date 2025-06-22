@@ -10,7 +10,9 @@ import { WaitingRoomPlayer } from '~/components/game/WaitingRoomPlayer'
 import { WaitingRoomAdmin } from '~/components/game/WaitingRoomAdmin'
 import { GameAdmin } from '~/components/game/GameAdmin'
 import { GamePlayer } from '~/components/game/GamePlayer'
+import { GameOver } from '~/components/game/GameOver'
 import { JoinRoomForm } from '~/components/game/JoinRoomForm'
+import { LoadingScreen } from '~/components/game/LoadingScreen'
 import type { Player, Room } from '~/types/game'
 import { savePlayerToStorage, getPlayerFromStorage } from '~/utils/playerStorage'
 
@@ -27,6 +29,7 @@ function RoomPage() {
   const [isHost, setIsHost] = useState(false)
   const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null)
   const [gameStarted, setGameStarted] = useState(false)
+  const [gameFinished, setGameFinished] = useState(false)
 
   // Load player from localStorage on mount
   useEffect(() => {
@@ -42,11 +45,67 @@ function RoomPage() {
     }
   }, [user, room, authLoading, roomLoading])
   
+  // Check initial room status
   useEffect(() => {
-    if (room && room.status === 'playing') {
-      setGameStarted(true)
+    if (room) {
+      if (room.status === 'playing') {
+        setGameStarted(true)
+        setGameFinished(false)
+      } else if (room.status === 'finished') {
+        setGameFinished(true)
+        setGameStarted(false)
+        // Clear localStorage when game is finished
+        localStorage.removeItem(`markedNumbers_${roomCode}`)
+      } else {
+        setGameStarted(false)
+        setGameFinished(false)
+        // Clear localStorage when returning to waiting room
+        localStorage.removeItem(`markedNumbers_${roomCode}`)
+      }
     }
-  }, [room])
+  }, [room, roomCode])
+
+  // Real-time subscription to room status changes
+  useEffect(() => {
+    if (!room) return
+
+    const channel = supabase
+      .channel(`room-page-status-${room.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'room',
+          filter: `id=eq.${room.id}`
+        },
+        (payload) => {
+          const updatedRoom = payload.new as Room
+          
+          if (updatedRoom.status === 'playing' && !gameStarted) {
+            setGameStarted(true)
+            setGameFinished(false)
+          } else if (updatedRoom.status === 'waiting' && gameStarted) {
+            setGameStarted(false)
+            setGameFinished(false)
+            // Clear localStorage when returning to waiting room
+            localStorage.removeItem(`markedNumbers_${roomCode}`)
+            toast.info('Voltando à sala de espera')
+          } else if (updatedRoom.status === 'finished' && !gameFinished) {
+            setGameFinished(true)
+            setGameStarted(false)
+            // Clear localStorage when game is finished
+            localStorage.removeItem(`markedNumbers_${roomCode}`)
+            toast.info('O jogo foi finalizado')
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      channel.unsubscribe()
+    }
+  }, [room?.id, roomCode])
   
   const handleJoin = (player: Player) => {
     setCurrentPlayer(player)
@@ -63,6 +122,11 @@ function RoomPage() {
 
   if (error || !room) {
     return <RoomNotFound roomCode={roomCode} />
+  }
+
+  // Game is finished
+  if (gameFinished || room.status === 'finished') {
+    return <GameOver roomName={room.name} />
   }
 
   // Game is active
@@ -85,96 +149,6 @@ function RoomPage() {
 
   // Fallback - should not reach here
   return <LoadingScreen />
-}
-
-// Loading Screen Component
-function LoadingScreen() {
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        duration: 0.6,
-        staggerChildren: 0.2
-      }
-    }
-  }
-
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: { duration: 0.5 }
-    }
-  }
-
-  // Use stable positions to avoid hydration mismatch
-  const particlePositions = [
-    { left: '10%', top: '20%' },
-    { left: '20%', top: '80%' },
-    { left: '30%', top: '40%' },
-    { left: '40%', top: '10%' },
-    { left: '50%', top: '60%' },
-    { left: '60%', top: '30%' },
-    { left: '70%', top: '70%' },
-    { left: '80%', top: '50%' },
-  ]
-
-  return (
-    <div className="relative min-h-screen bg-gradient-to-br from-[#3c95f1] to-[#c3def9] overflow-hidden">
-      <div
-        className="pointer-events-none absolute inset-0 opacity-30"
-        style={{
-          backgroundImage:
-            'repeating-linear-gradient(0deg, rgba(255,255,255,0.25) 0, rgba(255,255,255,0.25) 1px, transparent 1px, transparent 32px), repeating-linear-gradient(90deg, rgba(255,255,255,0.25) 0, rgba(255,255,255,0.25) 1px, transparent 1px, transparent 32px)',
-          backgroundPosition: 'center',
-        }}
-      />
-
-      <div className="absolute inset-0 overflow-hidden">
-        {particlePositions.map((pos, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-4 h-4 bg-white rounded-full opacity-20"
-            animate={{
-              y: [0, -20, 0],
-              x: [0, (i % 2 === 0 ? 10 : -10), 0],
-            }}
-            transition={{
-              duration: 3 + (i * 0.5),
-              repeat: Infinity,
-              delay: i * 0.3,
-            }}
-            style={pos}
-          />
-        ))}
-      </div>
-
-      <motion.div
-        className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 text-center"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <motion.div className="mb-8" variants={itemVariants}>
-          <div className="w-24 h-24 md:w-32 md:h-32 mx-auto mb-6">
-            <motion.div
-              className="w-full h-full border-4 border-white/30 border-t-white rounded-full"
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            />
-          </div>
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-4 drop-shadow-lg">
-            Carregando Sala...
-          </h1>
-          <p className="text-lg md:text-xl text-blue-100 leading-relaxed">
-            Preparando tudo para o seu jogo de bingo!
-          </p>
-        </motion.div>
-      </motion.div>
-    </div>
-  )
 }
 
 // Room Not Found Component

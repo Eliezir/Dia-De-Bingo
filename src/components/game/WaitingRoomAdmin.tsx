@@ -123,22 +123,39 @@ export function WaitingRoomAdmin({ room, onGameStart }: WaitingRoomAdminProps) {
       
       {/* Main Content */}
       <main className="flex-1 flex flex-col items-center justify-center p-6">
-        <h1 className="text-5xl font-extrabold text-white drop-shadow-lg mb-8 text-center absolute top-48">
-           Dia de Bingo
-        </h1>
+        <motion.div
+          className="text-center mb-8"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+        >
+          <h1 className="text-5xl font-extrabold text-white drop-shadow-lg mb-4">
+            Dia de Bingo
+          </h1>
+          <p className="text-xl text-blue-100">
+            Aguardando jogadores entrarem...
+          </p>
+        </motion.div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {onlinePlayers.map((player, index) => (
-            <div key={`${player.name}-${index}`} className="p-4 rounded-lg bg-black/20 text-white flex items-center justify-center">
-              <div className="text-center">
-                <div className="font-bold">{player.name}</div>
-                {player.is_host && (
-                  <div className="text-xs text-yellow-300">Anfitrião</div>
-                )}
+        <motion.div 
+          className="mb-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {onlinePlayers.map((player, index) => (
+              <div key={`${player.name}-${index}`} className="p-4 rounded-lg bg-black/20 text-white flex items-center justify-center">
+                <div className="text-center">
+                  <div className="font-bold">{player.name}</div>
+                  {player.is_host && (
+                    <div className="text-xs text-blue-600">Anfitrião</div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </motion.div>
       </main>
 
       {/* Footer */}
@@ -146,7 +163,7 @@ export function WaitingRoomAdmin({ room, onGameStart }: WaitingRoomAdminProps) {
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-2 text-white">
             <Icon icon="material-symbols:group" />
-            <span className="font-bold">{onlinePlayers.length}</span>
+            <span className="font-bold">{onlinePlayers.length} jogadores</span>
           </div>
           <Button 
             onClick={handleStartGame}

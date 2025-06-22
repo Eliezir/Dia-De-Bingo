@@ -14,6 +14,7 @@ import { Route as RoomRoomCodeRouteImport } from './routes/room.$roomCode'
 import { Route as AuthRegisterRouteImport } from './routes/_auth/register'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/_auth/forgot-password'
+import { Route as RoomRoomCodeGameOverRouteImport } from './routes/room.$roomCode.game-over'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -40,20 +41,27 @@ const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
   path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RoomRoomCodeGameOverRoute = RoomRoomCodeGameOverRouteImport.update({
+  id: '/game-over',
+  path: '/game-over',
+  getParentRoute: () => RoomRoomCodeRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/login': typeof AuthLoginRoute
   '/register': typeof AuthRegisterRoute
-  '/room/$roomCode': typeof RoomRoomCodeRoute
+  '/room/$roomCode': typeof RoomRoomCodeRouteWithChildren
+  '/room/$roomCode/game-over': typeof RoomRoomCodeGameOverRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/login': typeof AuthLoginRoute
   '/register': typeof AuthRegisterRoute
-  '/room/$roomCode': typeof RoomRoomCodeRoute
+  '/room/$roomCode': typeof RoomRoomCodeRouteWithChildren
+  '/room/$roomCode/game-over': typeof RoomRoomCodeGameOverRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -61,7 +69,8 @@ export interface FileRoutesById {
   '/_auth/forgot-password': typeof AuthForgotPasswordRoute
   '/_auth/login': typeof AuthLoginRoute
   '/_auth/register': typeof AuthRegisterRoute
-  '/room/$roomCode': typeof RoomRoomCodeRoute
+  '/room/$roomCode': typeof RoomRoomCodeRouteWithChildren
+  '/room/$roomCode/game-over': typeof RoomRoomCodeGameOverRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -71,8 +80,15 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/room/$roomCode'
+    | '/room/$roomCode/game-over'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/forgot-password' | '/login' | '/register' | '/room/$roomCode'
+  to:
+    | '/'
+    | '/forgot-password'
+    | '/login'
+    | '/register'
+    | '/room/$roomCode'
+    | '/room/$roomCode/game-over'
   id:
     | '__root__'
     | '/'
@@ -80,6 +96,7 @@ export interface FileRouteTypes {
     | '/_auth/login'
     | '/_auth/register'
     | '/room/$roomCode'
+    | '/room/$roomCode/game-over'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -87,7 +104,7 @@ export interface RootRouteChildren {
   AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthRegisterRoute: typeof AuthRegisterRoute
-  RoomRoomCodeRoute: typeof RoomRoomCodeRoute
+  RoomRoomCodeRoute: typeof RoomRoomCodeRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -127,15 +144,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/room/$roomCode/game-over': {
+      id: '/room/$roomCode/game-over'
+      path: '/game-over'
+      fullPath: '/room/$roomCode/game-over'
+      preLoaderRoute: typeof RoomRoomCodeGameOverRouteImport
+      parentRoute: typeof RoomRoomCodeRoute
+    }
   }
 }
+
+interface RoomRoomCodeRouteChildren {
+  RoomRoomCodeGameOverRoute: typeof RoomRoomCodeGameOverRoute
+}
+
+const RoomRoomCodeRouteChildren: RoomRoomCodeRouteChildren = {
+  RoomRoomCodeGameOverRoute: RoomRoomCodeGameOverRoute,
+}
+
+const RoomRoomCodeRouteWithChildren = RoomRoomCodeRoute._addFileChildren(
+  RoomRoomCodeRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthForgotPasswordRoute: AuthForgotPasswordRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthRegisterRoute: AuthRegisterRoute,
-  RoomRoomCodeRoute: RoomRoomCodeRoute,
+  RoomRoomCodeRoute: RoomRoomCodeRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

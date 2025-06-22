@@ -2,37 +2,31 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from '@iconify/react'
 import { Button } from '~/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
-import { Badge } from '~/components/ui/badge'
 import { Avatar, AvatarFallback } from '~/components/ui/avatar'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '~/components/ui/dialog'
-import { Input } from '~/components/ui/input'
-import { Label } from '~/components/ui/label'
 import { toast } from 'sonner'
-import { useJoinRoom } from '~/hooks/useRoom'
 import { supabase } from '~/lib/supabase/client'
+import { BingoSheet } from './BingoSheet'
+import { savePlayerToStorage, clearMarkedNumbersStorage } from '~/utils/playerStorage'
 import type { Room, Player } from '~/types/game'
 
 interface WaitingRoomPlayerProps {
   room: Room
   currentPlayer: Player
-  onSettingsChange?: (settings: { name: string }) => void
 }
 
-// Mocked bingo sheet for preview - 5x5 without free space
-const MOCK_BINGO_SHEET = [
-  [5, 18, 34, 53, 67],
-  [10, 22, 39, 47, 70],
-  [2, 28, 42, 52, 61],
-  [12, 19, 36, 59, 72],
-  [7, 25, 44, 58, 65],
-]
-
-export function WaitingRoomPlayer({ room, currentPlayer, onSettingsChange }: WaitingRoomPlayerProps) {
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-  const [playerName, setPlayerName] = useState(currentPlayer.name)
+export function WaitingRoomPlayer({ room, currentPlayer }: WaitingRoomPlayerProps) {
   const [onlinePlayers, setOnlinePlayers] = useState<any[]>([])
-  const joinRoomMutation = useJoinRoom()
+  const [bingoSheet, setBingoSheet] = useState<number[][]>([])
+
+  // Use the bingo sheet from the player data
+  useEffect(() => {
+    if (currentPlayer.bingo_sheet && Array.isArray(currentPlayer.bingo_sheet)) {
+      setBingoSheet(currentPlayer.bingo_sheet)
+      console.log('bingoSheet', currentPlayer.bingo_sheet)
+      
+    }
+  }, [currentPlayer.bingo_sheet])
 
   useEffect(() => {
     const channel = supabase.channel(`room:${room.code}`, {
@@ -80,23 +74,58 @@ export function WaitingRoomPlayer({ room, currentPlayer, onSettingsChange }: Wai
     }
   }, [room.code, currentPlayer.id, currentPlayer.name])
 
-  const handleJoin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!playerName.trim()) {
-      toast.error('Por favor, insira um nome para entrar na sala.')
-      return
+  // Listen to room status changes
+  useEffect(() => {
+    const roomStatusChannel = supabase.channel(`waiting-room-status-${room.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'room', filter: `id=eq.${room.id}` },
+        (payload) => {
+          const updatedRoom = payload.new as Room
+          
+          if (updatedRoom.status === 'playing') {
+            // Redirect to game when admin starts the game
+            window.location.href = `/room/${room.code}`
+          } else if (updatedRoom.status === 'finished') {
+            // Redirect to game over when game is finished
+            window.location.href = `/room/${room.code}/game-over`
+          }
+        }
+      )
+      .subscribe()
+      
+    return () => {
+      roomStatusChannel.unsubscribe()
     }
+  }, [room.id, room.code])
 
-    joinRoomMutation.mutate({ roomCode: room.code, name: playerName }, {
-      onSuccess: (data) => {
-        onSettingsChange?.({ name: data.name })
+  const handleGenerateNewSheet = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('create-bingo-sheet', {
+        body: { playerId: currentPlayer.id }
+      })
+
+      if (error) {
+        throw new Error(error.message)
       }
-    })
-  }
 
-  const handleSaveSettings = () => {
-    onSettingsChange?.({ name: playerName })
-    setIsSettingsOpen(false)
+      if (data && data.bingoSheet) {
+        setBingoSheet(data.bingoSheet)
+        
+        const updatedPlayer = {
+          ...currentPlayer,
+          bingo_sheet: data.bingoSheet
+        }
+        savePlayerToStorage(updatedPlayer, room.code)
+        
+        clearMarkedNumbersStorage(room.code, currentPlayer.id)
+        
+        toast.success('Nova cartela gerada!')
+      }
+    } catch (error) {
+      console.error('Error generating new bingo sheet:', error)
+      toast.error('Erro ao gerar nova cartela')
+    }
   }
 
   const containerVariants = {
@@ -195,7 +224,7 @@ export function WaitingRoomPlayer({ room, currentPlayer, onSettingsChange }: Wai
           </motion.p>
         </motion.div>
 
-        {/* Player Info and Settings */}
+        {/* Player Info */}
         <motion.div 
           className="mb-8"
           variants={itemVariants}
@@ -203,43 +232,15 @@ export function WaitingRoomPlayer({ room, currentPlayer, onSettingsChange }: Wai
           <div className="flex items-center justify-center gap-4 bg-white/10 backdrop-blur-sm rounded-lg p-4 text-white">
             <Avatar className="w-12 h-12">
               <AvatarFallback className="bg-blue-100 text-blue-600 font-semibold">
-                {currentPlayer.name.charAt(0).toUpperCase()}
+                {currentPlayer.name?.charAt(0)?.toUpperCase() || '?'}
               </AvatarFallback>
             </Avatar>
             <div className="text-center">
-              <div className="font-bold text-lg flex items-center gap-2">
-                {currentPlayer.name}
-                <Badge variant="secondary" className="bg-yellow-400 text-yellow-900">Você</Badge>
+              <div className="font-bold text-lg">
+                {currentPlayer.name || 'Jogador'}
               </div>
               <div className="text-sm text-blue-100">Jogador</div>
             </div>
-            <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="bg-white/20 border-white/30 text-white hover:bg-white/30">
-                  <Icon icon="material-symbols:settings" className="w-4 h-4 mr-1" />
-                  Configurações
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Configurações do Jogador</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="playerName">Nome do Jogador</Label>
-                    <Input
-                      id="playerName"
-                      value={playerName}
-                      onChange={(e) => setPlayerName(e.target.value)}
-                      placeholder="Digite seu nome"
-                    />
-                  </div>
-                  <Button onClick={handleSaveSettings} className="w-full">
-                    Salvar
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
           </div>
         </motion.div>
 
@@ -250,22 +251,29 @@ export function WaitingRoomPlayer({ room, currentPlayer, onSettingsChange }: Wai
         >
           <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 text-white">
             <h2 className="text-2xl font-bold text-center mb-4">Sua Cartela de Bingo</h2>
-            <div className="flex justify-center">
-              <div className="grid grid-cols-5 gap-2 bg-white/20 p-4 rounded-lg">
-                {MOCK_BINGO_SHEET.map((row, rowIdx) =>
-                  row.map((cell, colIdx) => (
-                    <div
-                      key={`${rowIdx}-${colIdx}`}
-                      className="w-12 h-12 md:w-16 md:h-16 flex items-center justify-center rounded-lg font-bold text-lg md:text-xl bg-white/20 border border-white/30"
-                    >
-                      {cell}
-                    </div>
-                  ))
-                )}
+            
+            {bingoSheet.length > 0 && (
+              <div className="flex justify-center mb-4">
+                <BingoSheet
+                  numbers={bingoSheet}
+                  readOnly={true}
+                  className="bg-white/20 p-4 rounded-lg"
+                />
               </div>
+            )}
+            
+            <div className="flex justify-center">
+              <Button
+                onClick={handleGenerateNewSheet}
+                className="bg-blue-500 hover:bg-blue-600 text-white font-semibold"
+              >
+                <Icon icon="material-symbols:shuffle" className="w-4 h-4 mr-2" />
+                Gerar Nova Cartela
+              </Button>
             </div>
+            
             <p className="text-center text-blue-100 text-sm mt-4">
-              Esta é uma prévia da sua cartela. O jogo começa quando o anfitrião iniciar!
+              Você pode gerar uma nova cartela enquanto aguarda o início do jogo!
             </p>
           </div>
         </motion.div>
@@ -281,10 +289,10 @@ export function WaitingRoomPlayer({ room, currentPlayer, onSettingsChange }: Wai
                 <div className="text-center">
                   <div className="font-bold">{player.name}</div>
                   {player.player_id === currentPlayer.id && (
-                    <div className="text-xs text-yellow-300">Você</div>
+                    <div className="text-xs text-blue-600">Você</div>
                   )}
                   {player.is_host && (
-                    <div className="text-xs text-yellow-300">Anfitrião</div>
+                    <div className="text-xs text-blue-600">Anfitrião</div>
                   )}
                 </div>
               </div>
