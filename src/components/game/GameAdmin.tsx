@@ -277,6 +277,35 @@ export function GameAdmin({ room }: GameAdminProps) {
     player.name.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
+  // Get Bingo letter for a number based on traditional rules
+  const getBingoLetter = (number: number): string => {
+    if (number >= 1 && number <= 18) return 'B'
+    if (number >= 19 && number <= 36) return 'I'
+    if (number >= 37 && number <= 54) return 'N'
+    if (number >= 55 && number <= 72) return 'G'
+    if (number >= 73 && number <= 90) return 'O'
+    return ''
+  }
+
+  // Get color for Bingo letter
+  const getBingoLetterColor = (letter: string): string => {
+    switch (letter) {
+      case 'B': return 'text-blue-600'
+      case 'I': return 'text-red-600'
+      case 'N': return 'text-purple-600'
+      case 'G': return 'text-green-600'
+      case 'O': return 'text-orange-600'
+      default: return 'text-gray-600'
+    }
+  }
+
+  // Format number with Bingo letter
+  const formatBingoNumber = (number: number): { letter: string; number: number; color: string } => {
+    const letter = getBingoLetter(number)
+    const color = getBingoLetterColor(letter)
+    return { letter, number, color }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-400 flex">
       {/* Main Game Area */}
@@ -398,7 +427,18 @@ export function GameAdmin({ room }: GameAdminProps) {
                     ease: "easeOut"
                   }}
                 >
-                  {rouletteNumber || '?'}
+                  {rouletteNumber ? (
+                    <div className="flex flex-col items-center">
+                      <span className="text-4xl font-bold text-white/80">
+                        {getBingoLetter(rouletteNumber)}
+                      </span>
+                      <span className="text-8xl font-bold text-white">
+                        {rouletteNumber}
+                      </span>
+                    </div>
+                  ) : (
+                    '?'
+                  )}
                 </motion.div>
               </div>
               
@@ -425,21 +465,29 @@ export function GameAdmin({ room }: GameAdminProps) {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-20 gap-2 max-h-96 overflow-y-auto">
-                {currentRoom.drawn_numbers.map(num => (
-                  <motion.div
-                    key={num}
-                    initial={{ scale: 0, rotate: -180 }}
-                    animate={{ scale: 1, rotate: 0 }}
-                    transition={{
-                      type: "spring",
-                      stiffness: 260,
-                      damping: 20
-                    }}
-                    className="w-12 h-12 bg-white rounded-full flex items-center justify-center font-bold text-blue-500"
-                  >
-                    {num}
-                  </motion.div>
-                ))}
+                {currentRoom.drawn_numbers.map(num => {
+                  const bingoInfo = formatBingoNumber(num)
+                  return (
+                    <motion.div
+                      key={num}
+                      initial={{ scale: 0, rotate: -180 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 260,
+                        damping: 20
+                      }}
+                      className="w-12 h-12 bg-white rounded-full flex flex-col items-center justify-center font-bold text-xs"
+                    >
+                      <span className={`text-xs font-bold ${bingoInfo.color}`}>
+                        {bingoInfo.letter}
+                      </span>
+                      <span className="text-blue-500 text-xs">
+                        {bingoInfo.number}
+                      </span>
+                    </motion.div>
+                  )
+                })}
               </div>
             </CardContent>
           </Card>
@@ -526,26 +574,34 @@ export function GameAdmin({ room }: GameAdminProps) {
                   />
                 </div>
                 
-                  <div className="w-1/3 bg-gray-50 border border-gray-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-gray-900 mb-3">Números Sorteados ({currentRoom.drawn_numbers.length})</h4>
-                    <div className="grid grid-cols-8 gap-1 max-h-80 overflow-y-auto">
-                      {currentRoom.drawn_numbers
-                        .sort((a, b) => a - b) 
-                        .map(num => (
+                <div className="w-1/3 bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-3">Números Sorteados ({currentRoom.drawn_numbers.length})</h4>
+                  <div className="grid grid-cols-8 gap-1 max-h-80 overflow-y-auto">
+                    {currentRoom.drawn_numbers
+                      .sort((a, b) => a - b) 
+                      .map(num => {
+                        const bingoInfo = formatBingoNumber(num)
+                        return (
                           <div
                             key={num}
-                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+                            className={`w-8 h-8 rounded-full flex flex-col items-center justify-center text-xs font-bold text-white ${
                               playerMarkedNumbers.has(num) ? 'bg-green-500' : 'bg-blue-500'
                             }`}
                           >
-                            {num}
+                            <span className="text-[10px] font-bold">
+                              {bingoInfo.letter}
+                            </span>
+                            <span className="text-[10px]">
+                              {bingoInfo.number}
+                            </span>
                           </div>
-                        ))}
-                    </div>
-                    {currentRoom.drawn_numbers.length === 0 && (
-                      <p className="text-gray-500 text-sm text-center py-2">Nenhum número sorteado ainda</p>
-                    )}
+                        )
+                      })}
                   </div>
+                  {currentRoom.drawn_numbers.length === 0 && (
+                    <p className="text-gray-500 text-sm text-center py-2">Nenhum número sorteado ainda</p>
+                  )}
+                </div>
               </div>
             </div>
             
