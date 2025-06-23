@@ -163,41 +163,11 @@ export function WaitingRoomPlayer({ room, currentPlayer }: WaitingRoomPlayerProp
       <header className="p-4 bg-white/10 backdrop-blur-sm text-white">
         <div className="max-w-7xl mx-auto grid grid-cols-3 items-center gap-4">
           <div className="text-left">
-            <p className="font-semibold hidden md:block">Entre em <span className="font-bold text-2xl">www.diadebingo.com</span></p>
+            <p className="font-semibold hidden md:block">Entre em <span className="font-bold text-2xl">www.dia-de-bingo.vercel.app</span></p>
           </div>
-          <div className="text-center col-start-2">
+          <div className="text-center col-start-2 flex flex-col items-center justify-center">
             <p className="font-bold text-lg">PIN do jogo:</p>
             <p className="font-extrabold text-4xl md:text-6xl tracking-widest">{room.code}</p>
-          </div>
-          <div className="justify-self-end flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigator.clipboard.writeText(room.code)}
-              className="bg-white/20 border-white/30 text-white hover:bg-white/30"
-            >
-              <Icon icon="material-symbols:content-copy" className="w-4 h-4 mr-1" />
-              Copiar
-            </Button>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="bg-white/20 border-white/30 text-white hover:bg-white/30">
-                  <Icon icon="material-symbols:qr-code" className="w-4 h-4" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>QR Code da Sala</DialogTitle>
-                </DialogHeader>
-                <div className="flex justify-center p-4">
-                  <div className="bg-white p-4 rounded-lg">
-                    <div className="w-48 h-48 bg-gray-200 rounded flex items-center justify-center">
-                      <span className="text-gray-500">QR Code: {room.code}</span>
-                    </div>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
           </div>
         </div>
       </header>

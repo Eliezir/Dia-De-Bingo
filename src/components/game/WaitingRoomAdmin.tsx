@@ -189,7 +189,7 @@ export function WaitingRoomAdmin({ room, onGameStart }: WaitingRoomAdminProps) {
             initial={{ scale: 0.5, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.5, opacity: 0 }}
-            className="bg-white p-8 rounded-2xl shadow-2xl relative"
+            className="bg-white p-8 rounded-2xl shadow-2xl relative flex flex-col items-center justify-center"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="text-center mb-4">
