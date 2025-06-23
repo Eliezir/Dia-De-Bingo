@@ -13,4 +13,5 @@ export interface Room {
   drawn_numbers: number[]
   created_at: string
   host_id: string
+  round: number
 } 

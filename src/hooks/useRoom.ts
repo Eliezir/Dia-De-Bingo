@@ -112,10 +112,15 @@ export const useUpdateRoomStatus = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ roomId, status }: { roomId: number; status: string }) => {
+    mutationFn: async ({ roomId, status, round }: { roomId: number; status: string; round?: number }) => {
+      const updateData: any = { status }
+      if (round !== undefined) {
+        updateData.round = round
+      }
+      
       const { data, error } = await supabase
         .from('room')
-        .update({ status })
+        .update(updateData)
         .eq('id', roomId)
         .select()
         .single()

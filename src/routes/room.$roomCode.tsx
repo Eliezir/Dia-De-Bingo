@@ -92,19 +92,15 @@ function RoomPage() {
           } else if (updatedRoom.status === 'waiting' && gameStarted) {
             setGameStarted(false)
             setGameFinished(false)
-            // Clear localStorage when returning to waiting room
-            if (currentPlayer) {
-              clearMarkedNumbersStorage(roomCode, currentPlayer.id)
-            }
             toast.info('Voltando à sala de espera')
           } else if (updatedRoom.status === 'finished' && !gameFinished) {
             setGameFinished(true)
             setGameStarted(false)
-            // Clear localStorage when game is finished
-            if (currentPlayer) {
-              clearMarkedNumbersStorage(roomCode, currentPlayer.id)
-            }
             toast.info('O jogo foi finalizado')
+          }
+          
+          if (updatedRoom.round !== room.round) {
+            toast.info(`Nova rodada iniciada! (Rodada ${updatedRoom.round})`)
           }
         }
       )
@@ -113,7 +109,7 @@ function RoomPage() {
     return () => {
       channel.unsubscribe()
     }
-  }, [room?.id, roomCode, currentPlayer])
+  }, [room?.id, roomCode, currentPlayer, room?.round])
   
   const handleJoin = (player: Player) => {
     setCurrentPlayer(player)

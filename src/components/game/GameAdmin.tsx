@@ -232,7 +232,11 @@ export function GameAdmin({ room }: GameAdminProps) {
     try {
       const { error } = await supabase
         .from('room')
-        .update({ status: 'waiting', drawn_numbers: [] })
+        .update({ 
+          status: 'waiting', 
+          drawn_numbers: [],
+          round: currentRoom.round + 1 // Increment round for new game
+        })
         .eq('id', room.id)
 
       if (error) {
@@ -242,10 +246,6 @@ export function GameAdmin({ room }: GameAdminProps) {
 
       toast.success('Jogadores redirecionados para a sala de espera')
       
-      // Clear localStorage for all players
-      localStorage.removeItem(`markedNumbers_${room.code}`)
-      
-      // Redirect to waiting room
       window.location.href = `/room/${room.code}`
     } catch (error) {
       toast.error('Erro ao voltar à sala de espera')
@@ -266,10 +266,7 @@ export function GameAdmin({ room }: GameAdminProps) {
 
       toast.success('Jogo finalizado')
       
-      // Clear localStorage for all players
       localStorage.removeItem(`markedNumbers_${room.code}`)
-      
-      // Redirect to game over screen
       window.location.href = `/room/${room.code}/game-over`
     } catch (error) {
       toast.error('Erro ao finalizar jogo')

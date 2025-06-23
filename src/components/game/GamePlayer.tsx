@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { Icon } from '@iconify/react'
 import { supabase } from '~/lib/supabase/client'
 import { BingoSheet } from './BingoSheet'
-import { saveMarkedNumbersToStorage, getMarkedNumbersFromStorage } from '~/utils/playerStorage'
+import { saveMarkedNumbersToStorage, getMarkedNumbersFromStorage, saveCurrentRound } from '~/utils/playerStorage'
 import type { Player, Room } from '~/types/game'
 
 interface GamePlayerProps {
@@ -14,32 +14,21 @@ interface GamePlayerProps {
 export function GamePlayer({ room, currentPlayer }: GamePlayerProps) {
   const [currentRoom, setCurrentRoom] = useState(room)
   const [markedNumbers, setMarkedNumbers] = useState<Set<number>>(new Set())
-  const [isInitialized, setIsInitialized] = useState(false)
 
   useEffect(() => {
-    setCurrentRoom(room)
-  }, [room])
+    const storedMarkedNumbers = getMarkedNumbersFromStorage(room.code, currentPlayer.id, room.round)
+    setMarkedNumbers(new Set(storedMarkedNumbers))
+    
+    saveCurrentRound(room.code, room.round)
+  }, [room.code, currentPlayer.id, room.round])
 
-  // Load marked numbers from localStorage on component mount
   useEffect(() => {
-    if (room.code && currentPlayer.id) {
-      const savedMarkedNumbers = getMarkedNumbersFromStorage(room.code, currentPlayer.id)
-      console.log('Loading saved marked numbers for room', room.code, 'player', currentPlayer.id, ':', savedMarkedNumbers)
-      setMarkedNumbers(new Set(savedMarkedNumbers))
-      setIsInitialized(true)
+    if (markedNumbers.size > 0) {
+      saveMarkedNumbersToStorage(Array.from(markedNumbers), room.code, currentPlayer.id, room.round)
     }
-  }, [room.code, currentPlayer.id])
-
-  // Save marked numbers to localStorage whenever they change (but not during initial load)
-  useEffect(() => {
-    if (isInitialized && room.code && currentPlayer.id) {
-      console.log('Saving marked numbers for room', room.code, 'player', currentPlayer.id, ':', Array.from(markedNumbers))
-      saveMarkedNumbersToStorage(Array.from(markedNumbers), room.code, currentPlayer.id)
-    }
-  }, [markedNumbers, room.code, currentPlayer.id, isInitialized])
+  }, [markedNumbers, room.code, currentPlayer.id, room.round])
 
   useEffect(() => {
-    // Listen to database changes in the room table
     const roomUpdateSubscription = supabase.channel(`game-player-room-${room.id}`)
       .on(
         'postgres_changes',
@@ -57,7 +46,11 @@ export function GamePlayer({ room, currentPlayer }: GamePlayerProps) {
             window.location.href = `/room/${room.code}/game-over`
           }
           
-          // Don't automatically mark numbers - let the user control their own marking
+          // Handle round changes
+          if (updatedRoom.round !== room.round) {
+            setMarkedNumbers(new Set())
+            saveCurrentRound(room.code, updatedRoom.round)
+          }
         }
       )
       .subscribe()
@@ -65,7 +58,7 @@ export function GamePlayer({ room, currentPlayer }: GamePlayerProps) {
     return () => {
       roomUpdateSubscription.unsubscribe()
     }
-  }, [room.id, room.code])
+  }, [room.id, room.code, room.round])
 
   const handleNumberClick = (number: number) => {
     setMarkedNumbers(prev => {

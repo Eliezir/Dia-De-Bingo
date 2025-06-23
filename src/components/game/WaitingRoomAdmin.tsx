@@ -23,6 +23,7 @@ interface Room {
   drawn_numbers: number[]
   created_at: string
   host_id: string
+  round: number
 }
 
 interface WaitingRoomAdminProps {
@@ -84,7 +85,11 @@ export function WaitingRoomAdmin({ room, onGameStart }: WaitingRoomAdminProps) {
   const roomUrl = window.location.href
 
   const handleStartGame = () => {
-    updateStatusMutation.mutate({ roomId: room.id, status: 'playing' }, {
+    updateStatusMutation.mutate({ 
+      roomId: room.id, 
+      status: 'playing',
+      round: room.round + 1
+    }, {
       onSuccess: () => {
         onGameStart()
       }
