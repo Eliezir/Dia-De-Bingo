@@ -29,8 +29,10 @@ export function GameAdmin({ room }: GameAdminProps) {
   const [rouletteNumber, setRouletteNumber] = useState<number | null>(null)
   const [isVerifyingBingo, setIsVerifyingBingo] = useState(false)
   const [showWinAnimation, setShowWinAnimation] = useState(false)
+  const [showLoseAnimation, setShowLoseAnimation] = useState(false)
   const [showEndGameConfirmation, setShowEndGameConfirmation] = useState(false)
   const [showBackToWaitingConfirmation, setShowBackToWaitingConfirmation] = useState(false)
+  const [isMarkingDrawnNumbers, setIsMarkingDrawnNumbers] = useState(false)
 
   useEffect(() => {
     loadPlayers()
@@ -138,13 +140,45 @@ export function GameAdmin({ room }: GameAdminProps) {
     })
   }
 
-  const handleVerifyBingo = () => {
+  const animateMarkDrawnNumbers = async () => {
+    setIsMarkingDrawnNumbers(true)
+    setPlayerMarkedNumbers(new Set())
+
+    if (!selectedPlayer?.bingo_sheet || !Array.isArray(selectedPlayer.bingo_sheet)) {
+      setIsMarkingDrawnNumbers(false)
+      return
+    }
+
+    const sheet = selectedPlayer.bingo_sheet
+    const drawnNumbers = currentRoom.drawn_numbers
+
+    // Animate checking all numbers on the sheet and mark the ones that were drawn
+    for (let row = 0; row < 5; row++) {
+      for (let col = 0; col < 5; col++) {
+        const number = sheet[row][col]
+        
+        // Check if this number was drawn
+        if (drawnNumbers.includes(number)) {
+          // Mark this cell as verified with a delay for suspense
+          await new Promise(resolve => setTimeout(resolve, 500))
+          setPlayerMarkedNumbers(prev => new Set([...prev, number]))
+        }
+      }
+    }
+
+    // Wait a moment after all numbers are marked for dramatic effect
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
+    setIsMarkingDrawnNumbers(false)
+    setIsVerifyingBingo(true)
+  }
+
+  const handleConfirmBingo = () => {
     // Check if there's a valid bingo pattern
     const hasBingo = checkBingoPattern(Array.from(playerMarkedNumbers))
     
     if (hasBingo) {
       setShowWinAnimation(true)
-      toast.success(`${selectedPlayer?.name} venceu! 🎉`)
       
       // Auto-close after animation
       setTimeout(() => {
@@ -152,8 +186,23 @@ export function GameAdmin({ room }: GameAdminProps) {
         setShowBingoCheck(false)
       }, 3000)
     } else {
-      toast.error('Não há um bingo válido. Verifique os números marcados.')
+      setShowLoseAnimation(true)
+      
+      // Auto-close after animation
+      setTimeout(() => {
+        setShowLoseAnimation(false)
+      }, 2000)
     }
+  }
+
+  const handleNotBingo = () => {
+    setShowLoseAnimation(true)
+    
+    // Auto-close after animation
+    setTimeout(() => {
+      setShowLoseAnimation(false)
+      setShowBingoCheck(false)
+    }, 2000)
   }
 
   const checkBingoPattern = (markedNumbers: number[]): boolean => {
@@ -429,6 +478,27 @@ export function GameAdmin({ room }: GameAdminProps) {
               </motion.div>
             </motion.div>
           )}
+
+          {/* Lose Animation */}
+          {showLoseAnimation && (
+            <motion.div
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="absolute inset-0 bg-red-500/90 backdrop-blur-sm flex items-center justify-center z-50"
+            >
+              <motion.div 
+                className="text-center p-12 bg-white rounded-3xl border border-red-300 shadow-2xl"
+                initial={{ scale: 0.5 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2 }}
+              >
+                <Icon icon="material-symbols:close" className="text-8xl text-red-600 mb-6 mx-auto" />
+                <h2 className="text-6xl font-bold text-red-600 mb-4">NÃO É BINGO</h2>
+                <p className="text-2xl text-gray-700 mb-4">Verificação negada</p>
+                <p className="text-lg text-gray-600">Continue verificando outros jogadores</p>
+              </motion.div>
+            </motion.div>
+          )}
           
           <div className="space-y-6">
             {/* Player Info */}
@@ -451,7 +521,7 @@ export function GameAdmin({ room }: GameAdminProps) {
                 <div className="flex-1">
                   <BingoSheet
                     numbers={selectedPlayer?.bingo_sheet && Array.isArray(selectedPlayer.bingo_sheet) ? selectedPlayer.bingo_sheet : []}
-                    markedNumbers={isVerifyingBingo ? Array.from(playerMarkedNumbers) : []}
+                    markedNumbers={Array.from(playerMarkedNumbers)}
                     onNumberClick={isVerifyingBingo ? handlePlayerNumberClick : undefined}
                     readOnly={!isVerifyingBingo}
                     className="bg-white p-6 rounded-lg"
@@ -459,13 +529,11 @@ export function GameAdmin({ room }: GameAdminProps) {
                   />
                 </div>
                 
-                {/* Drawn Numbers List - Only show during manual verification */}
-                {isVerifyingBingo && (
                   <div className="w-1/3 bg-gray-50 border border-gray-200 rounded-lg p-4">
                     <h4 className="font-semibold text-gray-900 mb-3">Números Sorteados ({currentRoom.drawn_numbers.length})</h4>
                     <div className="grid grid-cols-8 gap-1 max-h-80 overflow-y-auto">
                       {currentRoom.drawn_numbers
-                        .sort((a, b) => a - b) // Sort in ascending order
+                        .sort((a, b) => a - b) 
                         .map(num => (
                           <div
                             key={num}
@@ -481,7 +549,6 @@ export function GameAdmin({ room }: GameAdminProps) {
                       <p className="text-gray-500 text-sm text-center py-2">Nenhum número sorteado ainda</p>
                     )}
                   </div>
-                )}
               </div>
             </div>
             
@@ -491,27 +558,28 @@ export function GameAdmin({ room }: GameAdminProps) {
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <h4 className="font-semibold text-blue-900 mb-2">Passo 1: Visualização</h4>
                   <p className="text-blue-700 text-sm">
-                    Visualize a cartela do jogador acima. Verifique se os números marcados correspondem aos números sorteados.
+                    Visualize a cartela do jogador acima. Use o botão para marcar automaticamente os números sorteados.
                   </p>
                 </div>
                 
                 <div className="flex justify-center">
                   <Button
-                    onClick={() => setIsVerifyingBingo(true)}
+                    onClick={animateMarkDrawnNumbers}
+                    disabled={isMarkingDrawnNumbers}
                     size="lg"
-                    className="bg-green-600 hover:bg-green-700"
+                    className="bg-blue-600 hover:bg-blue-700"
                   >
                     <Icon icon="material-symbols:check-circle" className="mr-2" />
-                    Iniciar Verificação Manual
+                    {isMarkingDrawnNumbers ? 'Marcando números...' : 'Marcar Números Sorteados'}
                   </Button>
                 </div>
               </div>
             ) : (
               <div className="space-y-4">
                 <div className="bg-yellow-50 p-4 rounded-lg">
-                  <h4 className="font-semibold text-yellow-900 mb-2">Passo 2: Verificação Manual</h4>
+                  <h4 className="font-semibold text-yellow-900 mb-2">Passo 2: Verificação</h4>
                   <p className="text-yellow-700 text-sm">
-                    Clique nos números da cartela para marcar/desmarcar e verificar se há um bingo válido.
+                    Os números sorteados foram marcados. Verifique se há um bingo válido e confirme sua decisão.
                   </p>
                 </div>
                 
@@ -525,12 +593,20 @@ export function GameAdmin({ room }: GameAdminProps) {
                     Voltar
                   </Button>
                   <Button
-                    onClick={handleVerifyBingo}
+                    onClick={handleConfirmBingo}
                     size="lg"
                     className="bg-green-600 hover:bg-green-700"
                   >
                     <Icon icon="material-symbols:celebration" className="mr-2" />
                     Confirmar Bingo
+                  </Button>
+                  <Button
+                    onClick={handleNotBingo}
+                    size="lg"
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    <Icon icon="material-symbols:close" className="mr-2" />
+                    Não é Bingo
                   </Button>
                 </div>
               </div>

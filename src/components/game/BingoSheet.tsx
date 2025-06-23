@@ -78,7 +78,6 @@ export const BingoSheet = ({
                 disabled={readOnly}
                 className={cn(
                   'aspect-square rounded-lg border-2 font-bold text-lg transition-all duration-200',
-                  'focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-transparent',
                   {
                     'cursor-pointer': !readOnly,
                     'cursor-default': readOnly,
