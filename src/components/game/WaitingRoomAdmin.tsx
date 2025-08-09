@@ -96,6 +96,11 @@ export function WaitingRoomAdmin({ room, onGameStart }: WaitingRoomAdminProps) {
     })
   }
 
+  const handleCopyRoomUrl = () => {
+    navigator.clipboard.writeText(roomUrl)
+    toast.success('URL da sala copiada para a área de transferência!')
+  }
+
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-[#3c95f1] to-[#c3def9] overflow-hidden flex flex-col">
       <div
@@ -201,10 +206,13 @@ export function WaitingRoomAdmin({ room, onGameStart }: WaitingRoomAdminProps) {
               <p className="font-bold text-2xl text-gray-800">Escaneie para entrar na sala</p>
               <p className="font-extrabold text-7xl text-blue-600 tracking-widest">{room.code}</p>
             </div>
-            <QRCodeSVG value={roomUrl} size={300} bgColor="#ffffff" fgColor="#000000" />
+            <div className='cursor-pointer group relative hover:bg-gray-400/50 rounded-lg p-6 group transition-all duration-300' onClick={handleCopyRoomUrl}>
+              <Icon className="hidden absolute group-hover:block top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-8xl text-blue-500 text-shadow-lg copy"  icon="material-symbols:content-copy-outline-rounded" />
+              <QRCodeSVG value={roomUrl} size={300}  fgColor="#000000" bgColor="transparent"/>
+            </div>
             <button
               onClick={() => setQrModalOpen(false)}
-              className="absolute -top-4 -right-4 bg-red-500 text-white rounded-full h-10 w-10 flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors"
+              className="cursor-pointer absolute -top-4 -right-4 bg-red-500 text-white rounded-full h-10 w-10 flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors"
             >
               <Icon icon="material-symbols:close" className="text-2xl" />
             </button>
