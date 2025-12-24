@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Icon } from '@iconify/react'
+import Avatar from 'react-nice-avatar'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Badge } from '~/components/ui/badge'
@@ -234,8 +235,7 @@ export function GameAdmin({ room }: GameAdminProps) {
         .from('room')
         .update({ 
           status: 'waiting', 
-          drawn_numbers: [],
-          round: currentRoom.round + 1 // Increment round for new game
+          drawn_numbers: []
         })
         .eq('id', room.id)
 
@@ -244,7 +244,7 @@ export function GameAdmin({ room }: GameAdminProps) {
         return
       }
 
-      toast.success('Jogadores redirecionados para a sala de espera')
+      toast.success('Voltando à sala de espera')
       
       window.location.href = `/room/${room.code}`
     } catch (error) {
@@ -314,7 +314,12 @@ export function GameAdmin({ room }: GameAdminProps) {
         <header className="p-6 bg-white/10 backdrop-blur-sm text-white border-b border-white/20">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold">{room.name}</h1>
+              <div className="flex items-center gap-3 mb-2">
+                <h1 className="text-3xl font-bold">{room.name}</h1>
+                <Badge className="bg-blue-500/80 text-white text-base px-3 py-1">
+                  Rodada {currentRoom.round}
+                </Badge>
+              </div>
               <p className="text-blue-100">Modo Administrador</p>
             </div>
             <div className="flex items-center gap-6">
@@ -357,9 +362,21 @@ export function GameAdmin({ room }: GameAdminProps) {
                           <Card key={player.id} className="bg-white/10 backdrop-blur-sm border-white/20">
                             <CardContent className="p-4">
                               <div className="flex items-center justify-between mb-3">
-                                <div>
-                                  <h3 className="font-bold text-white">{player.name}</h3>
-                                  <p className="text-sm text-blue-100">Jogador #{index + 1}</p>
+                                <div className="flex items-center gap-3">
+                                  {player.avatar_config ? (
+                                    <Avatar
+                                      style={{ width: '40px', height: '40px' }}
+                                      {...player.avatar_config}
+                                    />
+                                  ) : (
+                                    <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
+                                      {player.name?.charAt(0)?.toUpperCase() || '?'}
+                                    </div>
+                                  )}
+                                  <div>
+                                    <h3 className="font-bold text-white">{player.name}</h3>
+                                    <p className="text-sm text-blue-100">Jogador #{index + 1}</p>
+                                  </div>
                                 </div>
                                 <Badge variant="secondary" className="bg-white/20 text-white">
                                   Ativo
@@ -387,8 +404,8 @@ export function GameAdmin({ room }: GameAdminProps) {
                   size="sm"
                   className="border-white/30 text-white hover:bg-white/10"
                 >
-                  <Icon icon="material-symbols:arrow-back" className="mr-2" />
-                  Voltar à Sala
+                  <Icon icon="material-symbols:refresh" className="mr-2" />
+                  Nova Rodada
                 </Button>
                 <Button
                   onClick={() => setShowEndGameConfirmation(true)}
@@ -557,13 +574,34 @@ export function GameAdmin({ room }: GameAdminProps) {
           <div className="space-y-6">
             {/* Player Info */}
             <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="font-semibold text-lg mb-2">Informações do Jogador</h3>
+              <div className="flex items-center gap-4 mb-4">
+                {selectedPlayer?.avatar_config ? (
+                  <Avatar
+                    style={{ width: '56px', height: '56px' }}
+                    {...selectedPlayer.avatar_config}
+                  />
+                ) : (
+                  <div className="w-14 h-14 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold text-xl">
+                    {selectedPlayer?.name?.charAt(0)?.toUpperCase() || '?'}
+                  </div>
+                )}
+                <div>
+                  <h3 className="font-semibold text-lg">{selectedPlayer?.name}</h3>
+                  <p className="text-sm text-gray-600">
+                    Jogador #
+                    {selectedPlayer
+                      ? players.findIndex((p) => p.id === selectedPlayer.id) + 1
+                      : '-'}
+                  </p>
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="font-medium">Nome:</span> {selectedPlayer?.name}
+                  <span className="font-medium">Números Marcados:</span> {playerMarkedNumbers.size}
                 </div>
                 <div>
-                  <span className="font-medium">Números Marcados:</span> {playerMarkedNumbers.size}
+                  <span className="font-medium">Total de Números Sorteados:</span>{' '}
+                  {currentRoom.drawn_numbers.length}
                 </div>
               </div>
             </div>
@@ -682,8 +720,8 @@ export function GameAdmin({ room }: GameAdminProps) {
         open={showBackToWaitingConfirmation}
         onOpenChange={setShowBackToWaitingConfirmation}
         title="Voltar à Sala de Espera"
-        description="Tem certeza que deseja voltar à sala de espera? O jogo será pausado e os jogadores poderão gerar novas cartelas."
-        confirmText="Voltar à Sala"
+        description="Tem certeza que deseja voltar à sala de espera para iniciar uma nova rodada? A rodada atual será finalizada, os números sorteados serão limpos e os jogadores poderão gerar novas cartelas. A rodada será incrementada automaticamente."
+        confirmText="Voltar e Iniciar Nova Rodada"
         onConfirm={handleBackToWaitingRoom}
         variant="default"
       />

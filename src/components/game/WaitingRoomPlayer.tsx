@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Icon } from '@iconify/react'
 import Avatar, { genConfig } from 'react-nice-avatar'
 import { Button } from '~/components/ui/button'
+import { Badge } from '~/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '~/components/ui/dialog'
 import { toast } from 'sonner'
 import { supabase } from '~/lib/supabase/client'
@@ -376,7 +377,7 @@ export function WaitingRoomPlayer({ room, currentPlayer }: WaitingRoomPlayerProp
                 <div className="text-center">
                   <div className="font-bold">{player.name}</div>
                   {player.player_id === currentPlayer.id && (
-                    <div className="text-xs text-blue-400">Você</div>
+                    <div className="text-xs text-blue-50">Você</div>
                   )}
                   {player.is_host && (
                     <div className="text-xs text-yellow-400">Anfitrião</div>

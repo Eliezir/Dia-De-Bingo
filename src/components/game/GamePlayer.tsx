@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Icon } from '@iconify/react'
 import { supabase } from '~/lib/supabase/client'
 import { BingoSheet } from './BingoSheet'
+import { Badge } from '~/components/ui/badge'
 import { saveMarkedNumbersToStorage, getMarkedNumbersFromStorage, saveCurrentRound } from '~/utils/playerStorage'
 import type { Player, Room } from '~/types/game'
 
@@ -107,7 +108,12 @@ export function GamePlayer({ room, currentPlayer }: GamePlayerProps) {
       <header className="p-4 bg-white/10 backdrop-blur-sm text-white">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="text-left">
-            <h1 className="text-2xl md:text-3xl font-bold">{room.name}</h1>
+            <div className="flex items-center gap-3 mb-1">
+              <h1 className="text-2xl md:text-3xl font-bold">{room.name}</h1>
+              <Badge className="bg-blue-500/80 text-white text-sm md:text-base px-2 py-1">
+                Rodada {currentRoom.round}
+              </Badge>
+            </div>
             <p className="text-sm md:text-base text-blue-100">Jogador: {currentPlayer.name}</p>
           </div>
           <div className="text-right">

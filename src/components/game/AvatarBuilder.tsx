@@ -1,5 +1,4 @@
 import { useState } from 'react'
-// @ts-ignore - CommonJS module export
 import Avatar, { genConfig } from 'react-nice-avatar'
 import { Button } from '~/components/ui/button'
 import { Label } from '~/components/ui/label'
