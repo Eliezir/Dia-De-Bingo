@@ -281,16 +281,64 @@ export function GamePlayer({ room, currentPlayer }: GamePlayerProps) {
     }
   }
 
+  const isChristmas = currentRoom.name.toLowerCase().includes('natal') || currentRoom.name.toLowerCase().includes('christmas')
+
+  const snowflakePositions = Array.from({ length: 20 }).map((_, i) => ({
+    left: `${Math.random() * 100}%`,
+    top: `${Math.random() * 100}%`,
+    delay: Math.random() * 5,
+    duration: 3 + Math.random() * 2
+  }))
+
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-[#3c95f1] to-[#c3def9] overflow-hidden flex flex-col">
       <div
         className="pointer-events-none absolute inset-0 opacity-30"
         style={{
-          backgroundImage:
-            'repeating-linear-gradient(0deg, rgba(255,255,255,0.25) 0, rgba(255,255,255,0.25) 1px, transparent 1px, transparent 32px), repeating-linear-gradient(90deg, rgba(255,255,255,0.25) 0, rgba(255,255,255,0.25) 1px, transparent 1px, transparent 32px)',
+          backgroundImage: isChristmas
+            ? 'repeating-linear-gradient(45deg, rgba(255,255,255,0.1) 0, rgba(255,255,255,0.1) 2px, transparent 2px, transparent 40px), repeating-linear-gradient(-45deg, rgba(255,255,255,0.1) 0, rgba(255,255,255,0.1) 2px, transparent 2px, transparent 40px)'
+            : 'repeating-linear-gradient(0deg, rgba(255,255,255,0.25) 0, rgba(255,255,255,0.25) 1px, transparent 1px, transparent 32px), repeating-linear-gradient(90deg, rgba(255,255,255,0.25) 0, rgba(255,255,255,0.25) 1px, transparent 1px, transparent 32px)',
           backgroundPosition: 'center',
         }}
       />
+      {isChristmas && (
+        <>
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {snowflakePositions.map((pos, i) => (
+              <motion.div
+                key={i}
+                className="absolute text-white text-2xl"
+                style={{ left: pos.left, top: pos.top }}
+                animate={{
+                  y: [0, 100],
+                  rotate: [0, 360],
+                  opacity: [0.3, 0.8, 0.3]
+                }}
+                transition={{
+                  duration: pos.duration,
+                  repeat: Infinity,
+                  delay: pos.delay,
+                  ease: "linear"
+                }}
+              >
+                <Icon icon="material-symbols:snowflake" />
+              </motion.div>
+            ))}
+          </div>
+          <div className="absolute top-4 left-4 text-4xl animate-bounce pointer-events-none">
+            🎄
+          </div>
+          <div className="absolute top-4 right-4 text-4xl animate-bounce pointer-events-none" style={{ animationDelay: '0.5s' }}>
+            ⭐
+          </div>
+          <div className="absolute bottom-20 left-8 text-3xl pointer-events-none">
+            🎁
+          </div>
+          <div className="absolute bottom-20 right-8 text-3xl pointer-events-none">
+            🦌
+          </div>
+        </>
+      )}
       
       <header className="p-4 bg-white/10 backdrop-blur-sm text-white">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -323,9 +371,11 @@ export function GamePlayer({ room, currentPlayer }: GamePlayerProps) {
             className="text-center mb-6"
             variants={itemVariants}
           >
-            <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">Sua Cartela</h2>
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
+              {isChristmas ? '🎁 Sua Cartela 🎁' : 'Sua Cartela'}
+            </h2>
             <p className="text-blue-100">
-              Marque os números conforme eles são sorteados!
+              {isChristmas ? '🎄 Marque os números conforme eles são sorteados! 🎄' : 'Marque os números conforme eles são sorteados!'}
             </p>
           </motion.div>
 
@@ -377,11 +427,13 @@ export function GamePlayer({ room, currentPlayer }: GamePlayerProps) {
           <Button
             onClick={handleCallBingoClick}
             disabled={hasCalledBingo}
-            className="bg-blue-500 hover:bg-blue-600 text-white font-bold flex items-center gap-2 px-6 py-2 rounded-full shadow-lg disabled:opacity-50"
+            className={`${isChristmas ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-500 hover:bg-blue-600'} text-white font-bold flex items-center gap-2 px-6 py-2 rounded-full shadow-lg disabled:opacity-50`}
           >
-            <Icon icon="material-symbols:campaign" className="text-xl" />
+            {isChristmas ? '🎅' : <Icon icon="material-symbols:campaign" className="text-xl" />}
             {hasCalledBingo 
               ? 'Bingo enviado' 
+              : isChristmas 
+                ? 'Gritar BINGO DE NATAL!' 
                 : 'Gritar BINGO'}
           </Button>
         </div>

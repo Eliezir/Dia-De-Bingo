@@ -227,16 +227,64 @@ export function WaitingRoomPlayer({ room, currentPlayer }: WaitingRoomPlayerProp
     }
   }
 
+  const isChristmas = room.name.toLowerCase().includes('natal') || room.name.toLowerCase().includes('christmas')
+
+  const snowflakePositions = Array.from({ length: 20 }).map((_, i) => ({
+    left: `${Math.random() * 100}%`,
+    top: `${Math.random() * 100}%`,
+    delay: Math.random() * 5,
+    duration: 3 + Math.random() * 2
+  }))
+
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-[#3c95f1] to-[#c3def9] overflow-hidden flex flex-col">
       <div
         className="pointer-events-none absolute inset-0 opacity-30"
         style={{
-          backgroundImage:
-            'repeating-linear-gradient(0deg, rgba(255,255,255,0.25) 0, rgba(255,255,255,0.25) 1px, transparent 1px, transparent 32px), repeating-linear-gradient(90deg, rgba(255,255,255,0.25) 0, rgba(255,255,255,0.25) 1px, transparent 1px, transparent 32px)',
+          backgroundImage: isChristmas
+            ? 'repeating-linear-gradient(45deg, rgba(255,255,255,0.1) 0, rgba(255,255,255,0.1) 2px, transparent 2px, transparent 40px), repeating-linear-gradient(-45deg, rgba(255,255,255,0.1) 0, rgba(255,255,255,0.1) 2px, transparent 2px, transparent 40px)'
+            : 'repeating-linear-gradient(0deg, rgba(255,255,255,0.25) 0, rgba(255,255,255,0.25) 1px, transparent 1px, transparent 32px), repeating-linear-gradient(90deg, rgba(255,255,255,0.25) 0, rgba(255,255,255,0.25) 1px, transparent 1px, transparent 32px)',
           backgroundPosition: 'center',
         }}
       />
+      {isChristmas && (
+        <>
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {snowflakePositions.map((pos, i) => (
+              <motion.div
+                key={i}
+                className="absolute text-white text-2xl"
+                style={{ left: pos.left, top: pos.top }}
+                animate={{
+                  y: [0, 100],
+                  rotate: [0, 360],
+                  opacity: [0.3, 0.8, 0.3]
+                }}
+                transition={{
+                  duration: pos.duration,
+                  repeat: Infinity,
+                  delay: pos.delay,
+                  ease: "linear"
+                }}
+              >
+                <Icon icon="material-symbols:snowflake" />
+              </motion.div>
+            ))}
+          </div>
+          <div className="absolute top-4 left-4 text-4xl animate-bounce pointer-events-none">
+            🎄
+          </div>
+          <div className="absolute top-4 right-4 text-4xl animate-bounce pointer-events-none" style={{ animationDelay: '0.5s' }}>
+            ⭐
+          </div>
+          <div className="absolute bottom-20 left-8 text-3xl pointer-events-none">
+            🎁
+          </div>
+          <div className="absolute bottom-20 right-8 text-3xl pointer-events-none">
+            🦌
+          </div>
+        </>
+      )}
       
       {/* Header */}
       <header className="p-4 bg-white/10 backdrop-blur-sm text-white">
@@ -263,13 +311,13 @@ export function WaitingRoomPlayer({ room, currentPlayer }: WaitingRoomPlayerProp
             className="text-5xl font-extrabold text-white drop-shadow-lg mb-4"
             variants={itemVariants}
           >
-            Dia de Bingo
+            {isChristmas ? '🎄 Bingo de Natal 🎄' : 'Dia de Bingo'}
           </motion.h1>
           <motion.p 
-            className="text-xl text-blue-100"
+            className={`text-xl ${isChristmas ? 'text-yellow-200' : 'text-blue-100'}`}
             variants={itemVariants}
           >
-            Aguardando o anfitrião iniciar o jogo...
+            {isChristmas ? '🎅 Aguardando o anfitrião iniciar o jogo...' : 'Aguardando o anfitrião iniciar o jogo...'}
           </motion.p>
         </motion.div>
 
@@ -351,7 +399,7 @@ export function WaitingRoomPlayer({ room, currentPlayer }: WaitingRoomPlayerProp
             </div>
             
             <p className="text-center text-blue-100 text-sm mt-4">
-              Você pode gerar uma nova cartela enquanto aguarda o início do jogo!
+              {isChristmas ? '🎁 Você pode gerar uma nova cartela enquanto aguarda o início do jogo! 🎁' : 'Você pode gerar uma nova cartela enquanto aguarda o início do jogo!'}
             </p>
           </div>
         </motion.div>
@@ -362,29 +410,42 @@ export function WaitingRoomPlayer({ room, currentPlayer }: WaitingRoomPlayerProp
           variants={itemVariants}
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {onlinePlayers.map((player, index) => (
-              <div key={`${player.name}-${index}`} className="p-4 rounded-lg bg-black/20 text-white flex flex-col items-center justify-center gap-2">
-                {player.avatar_config ? (
-                  <Avatar
-                    style={{ width: '48px', height: '48px' }}
-                    {...player.avatar_config}
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
-                    {player.name?.charAt(0)?.toUpperCase() || '?'}
+            {onlinePlayers.map((player, index) => {
+              const displayName = player.is_host && isChristmas ? 'Papai Noel' : player.name
+              const isHostAndChristmas = player.is_host && isChristmas
+              
+              return (
+                <div key={`${player.name}-${index}`} className="p-4 rounded-lg bg-black/20 text-white flex flex-col items-center justify-center gap-2">
+                  {isHostAndChristmas ? (
+                    <img
+                      src="/santa-avatar.png"
+                      alt="Papai Noel"
+                      className="w-12 h-12 rounded-full object-cover"
+                    />
+                  ) : player.avatar_config ? (
+                    <Avatar
+                      style={{ width: '48px', height: '48px' }}
+                      {...player.avatar_config}
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
+                      {displayName?.charAt(0)?.toUpperCase() || '?'}
+                    </div>
+                  )}
+                  <div className="text-center">
+                    <div className="font-bold">{displayName}</div>
+                    {player.player_id === currentPlayer.id && (
+                      <div className="text-xs text-blue-50">Você</div>
+                    )}
+                    {player.is_host && (
+                      <div className="text-xs text-yellow-400">
+                        {isChristmas ? '🎅 Papai Noel' : 'Anfitrião'}
+                      </div>
+                    )}
                   </div>
-                )}
-                <div className="text-center">
-                  <div className="font-bold">{player.name}</div>
-                  {player.player_id === currentPlayer.id && (
-                    <div className="text-xs text-blue-50">Você</div>
-                  )}
-                  {player.is_host && (
-                    <div className="text-xs text-yellow-400">Anfitrião</div>
-                  )}
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </motion.div>
       </main>
@@ -397,8 +458,10 @@ export function WaitingRoomPlayer({ room, currentPlayer }: WaitingRoomPlayerProp
             <span className="font-bold">{onlinePlayers.length} jogadores</span>
           </div>
           <div className="flex items-center gap-3 text-white">
-            <div className="w-3 h-3 bg-yellow-500 rounded-full animate-pulse"></div>
-            <span className="font-medium">Aguardando início do jogo</span>
+            <div className={`w-3 h-3 rounded-full animate-pulse ${isChristmas ? 'bg-red-500' : 'bg-yellow-500'}`}></div>
+            <span className="font-medium">
+              {isChristmas ? '🎅 Aguardando início do jogo' : 'Aguardando início do jogo'}
+            </span>
           </div>
         </div>
       </footer>

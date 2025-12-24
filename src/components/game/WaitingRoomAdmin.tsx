@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from '@iconify/react'
 import { QRCodeSVG } from 'qrcode.react'
-import Avatar from 'react-nice-avatar'
+import Avatar, { genConfig } from 'react-nice-avatar'
 import { Button } from '~/components/ui/button'
 import { toast } from 'sonner'
 import { useUpdateRoomStatus } from '~/hooks/useRoom'
 import { supabase } from '~/lib/supabase/client'
 import type { Player } from '~/types/game'
+
+
 
 interface Room {
   id: number
@@ -30,6 +32,8 @@ export function WaitingRoomAdmin({ room, onGameStart }: WaitingRoomAdminProps) {
   const [onlinePlayers, setOnlinePlayers] = useState<any[]>([])
   const [playersData, setPlayersData] = useState<Record<number, Player>>({})
   const updateStatusMutation = useUpdateRoomStatus()
+  
+  const isChristmas = room.name.toLowerCase().includes('natal') || room.name.toLowerCase().includes('christmas')
 
   useEffect(() => {
     const loadPlayersData = async () => {
@@ -86,7 +90,7 @@ export function WaitingRoomAdmin({ room, onGameStart }: WaitingRoomAdminProps) {
     channel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         await channel.track({ 
-          name: 'Anfitrião',
+          name: isChristmas ? 'Papai Noel' : 'Anfitrião',
           is_host: true,
           host_id: room.host_id,
         })
@@ -96,7 +100,7 @@ export function WaitingRoomAdmin({ room, onGameStart }: WaitingRoomAdminProps) {
     return () => {
       channel.unsubscribe()
     }
-  }, [room.code, room.host_id])
+  }, [room.code, room.host_id, isChristmas])
 
   useEffect(() => {
     const playerUpdateChannel = supabase.channel(`admin-player-updates-${room.id}`)
@@ -151,16 +155,62 @@ export function WaitingRoomAdmin({ room, onGameStart }: WaitingRoomAdminProps) {
     toast.success('URL da sala copiada para a área de transferência!')
   }
 
+  const snowflakePositions = Array.from({ length: 20 }).map((_, i) => ({
+    left: `${Math.random() * 100}%`,
+    top: `${Math.random() * 100}%`,
+    delay: Math.random() * 5,
+    duration: 3 + Math.random() * 2
+  }))
+
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-[#3c95f1] to-[#c3def9] overflow-hidden flex flex-col">
       <div
         className="pointer-events-none absolute inset-0 opacity-30"
         style={{
-          backgroundImage:
-            'repeating-linear-gradient(0deg, rgba(255,255,255,0.25) 0, rgba(255,255,255,0.25) 1px, transparent 1px, transparent 32px), repeating-linear-gradient(90deg, rgba(255,255,255,0.25) 0, rgba(255,255,255,0.25) 1px, transparent 1px, transparent 32px)',
+          backgroundImage: isChristmas
+            ? 'repeating-linear-gradient(45deg, rgba(255,255,255,0.1) 0, rgba(255,255,255,0.1) 2px, transparent 2px, transparent 40px), repeating-linear-gradient(-45deg, rgba(255,255,255,0.1) 0, rgba(255,255,255,0.1) 2px, transparent 2px, transparent 40px)'
+            : 'repeating-linear-gradient(0deg, rgba(255,255,255,0.25) 0, rgba(255,255,255,0.25) 1px, transparent 1px, transparent 32px), repeating-linear-gradient(90deg, rgba(255,255,255,0.25) 0, rgba(255,255,255,0.25) 1px, transparent 1px, transparent 32px)',
           backgroundPosition: 'center',
         }}
       />
+      {isChristmas && (
+        <>
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {snowflakePositions.map((pos, i) => (
+              <motion.div
+                key={i}
+                className="absolute text-white text-2xl"
+                style={{ left: pos.left, top: pos.top }}
+                animate={{
+                  y: [0, 100],
+                  rotate: [0, 360],
+                  opacity: [0.3, 0.8, 0.3]
+                }}
+                transition={{
+                  duration: pos.duration,
+                  repeat: Infinity,
+                  delay: pos.delay,
+                  ease: "linear"
+                }}
+              >
+                <Icon icon="material-symbols:snowflake" />
+              </motion.div>
+            ))}
+          </div>
+          <div className="absolute top-4 left-4 text-4xl animate-bounce pointer-events-none">
+            🎄
+          </div>
+          <div className="absolute top-4 right-4 text-4xl animate-bounce pointer-events-none" style={{ animationDelay: '0.5s' }}>
+            ⭐
+          </div>
+          <div className="absolute bottom-20 left-8 text-3xl pointer-events-none">
+            🎁
+          </div>
+          <div className="absolute bottom-20 right-8 text-3xl pointer-events-none">
+            🦌
+          </div>
+        </>
+      )}
       
       <header className="p-4 bg-white/10 backdrop-blur-sm text-white">
         <div className="max-w-7xl mx-auto grid grid-cols-3 items-center gap-4">
@@ -188,10 +238,10 @@ export function WaitingRoomAdmin({ room, onGameStart }: WaitingRoomAdminProps) {
           transition={{ duration: 0.6 }}
         >
           <h1 className="text-5xl font-extrabold text-white drop-shadow-lg mb-4">
-            Dia de Bingo
+            {isChristmas ? '🎄 Bingo de Natal 🎄' : 'Dia de Bingo'}
           </h1>
-          <p className="text-xl text-blue-100">
-            Aguardando jogadores entrarem...
+          <p className={`text-xl ${isChristmas ? 'text-yellow-200' : 'text-blue-100'}`}>
+            {isChristmas ? '🎅 Aguardando jogadores entrarem...' : 'Aguardando jogadores entrarem...'}
           </p>
         </motion.div>
         
@@ -205,23 +255,33 @@ export function WaitingRoomAdmin({ room, onGameStart }: WaitingRoomAdminProps) {
             {onlinePlayers.map((player, index) => {
               const playerData = playersData[player.player_id]
               const avatarConfig = player.avatar_config || playerData?.avatar_config
+              const displayName = player.is_host && isChristmas ? 'Papai Noel' : player.name
+              const isHostAndChristmas = player.is_host && isChristmas
               
               return (
                 <div key={`${player.name}-${index}`} className="p-4 rounded-lg bg-black/20 text-white flex flex-col items-center justify-center gap-2">
-                  {avatarConfig ? (
+                  {isHostAndChristmas ? (
+                    <img
+                      src="/santa-avatar.png"
+                      alt="Papai Noel"
+                      className="w-12 h-12 rounded-full object-cover"
+                    />
+                  ) : avatarConfig ? (
                     <Avatar
                       style={{ width: '48px', height: '48px' }}
                       {...avatarConfig}
                     />
                   ) : (
                     <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
-                      {player.name?.charAt(0)?.toUpperCase() || '?'}
+                      {displayName?.charAt(0)?.toUpperCase() || '?'}
                     </div>
                   )}
                   <div className="text-center">
-                    <div className="font-bold">{player.name}</div>
+                    <div className="font-bold">{displayName}</div>
                     {player.is_host && (
-                      <div className="text-xs text-yellow-400">Anfitrião</div>
+                      <div className="text-xs text-yellow-400">
+                        {isChristmas ? '🎅 Papai Noel' : 'Anfitrião'}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -241,10 +301,10 @@ export function WaitingRoomAdmin({ room, onGameStart }: WaitingRoomAdminProps) {
           <Button 
             onClick={handleStartGame}
             disabled={updateStatusMutation.isPending}
-            className="bg-green-500 hover:bg-green-600 text-white font-bold"
+            className={`${isChristmas ? 'bg-red-600 hover:bg-red-700' : 'bg-green-500 hover:bg-green-600'} text-white font-bold`}
           >
-            <Icon icon="material-symbols:play-arrow" className="mr-2" />
-            {updateStatusMutation.isPending ? 'Iniciando...' : 'Iniciar Jogo'}
+            {isChristmas ? '🎄' : <Icon icon="material-symbols:play-arrow" className="mr-2" />}
+            {updateStatusMutation.isPending ? 'Iniciando...' : isChristmas ? 'Iniciar Bingo de Natal!' : 'Iniciar Jogo'}
           </Button>
         </div>
       </footer>

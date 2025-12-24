@@ -484,19 +484,68 @@ export function GameAdmin({ room }: GameAdminProps) {
     return { letter, number, color }
   }
 
+  const isChristmas = currentRoom.name.toLowerCase().includes('natal') || currentRoom.name.toLowerCase().includes('christmas')
+
+  const snowflakePositions = Array.from({ length: 20 }).map((_, i) => ({
+    left: `${Math.random() * 100}%`,
+    top: `${Math.random() * 100}%`,
+    delay: Math.random() * 5,
+    duration: 3 + Math.random() * 2
+  }))
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-400 flex">
-      <div className="flex-1 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-400 flex relative overflow-hidden">
+      {isChristmas && (
+        <>
+          <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+            {snowflakePositions.map((pos, i) => (
+              <motion.div
+                key={i}
+                className="absolute text-white text-2xl"
+                style={{ left: pos.left, top: pos.top }}
+                animate={{
+                  y: [0, 100],
+                  rotate: [0, 360],
+                  opacity: [0.3, 0.8, 0.3]
+                }}
+                transition={{
+                  duration: pos.duration,
+                  repeat: Infinity,
+                  delay: pos.delay,
+                  ease: "linear"
+                }}
+              >
+                <Icon icon="material-symbols:snowflake" />
+              </motion.div>
+            ))}
+          </div>
+          <div className="absolute top-4 left-4 text-4xl animate-bounce pointer-events-none z-0">
+            🎄
+          </div>
+          <div className="absolute top-4 right-4 text-4xl animate-bounce pointer-events-none z-0" style={{ animationDelay: '0.5s' }}>
+            ⭐
+          </div>
+          <div className="absolute bottom-20 left-8 text-3xl pointer-events-none z-0">
+            🎁
+          </div>
+          <div className="absolute bottom-20 right-8 text-3xl pointer-events-none z-0">
+            🦌
+          </div>
+        </>
+      )}
+      <div className="flex-1 flex flex-col relative z-10">
         <header className="p-6 bg-white/10 backdrop-blur-sm text-white border-b border-white/20">
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-3 mb-2">
                 <h1 className="text-3xl font-bold">{room.name}</h1>
-                <Badge className="bg-blue-500/80 text-white text-base px-3 py-1">
-                  Rodada {currentRoom.round}
+                <Badge className={`${isChristmas ? 'bg-red-500/80' : 'bg-blue-500/80'} text-white text-base px-3 py-1`}>
+                  {isChristmas ? '🎄' : ''} Rodada {currentRoom.round} {isChristmas ? '🎄' : ''}
                 </Badge>
               </div>
-              <p className="text-blue-100">Modo Administrador</p>
+              <p className="text-blue-100">
+                {isChristmas ? '🎅 Modo Administrador - Bingo de Natal 🎅' : 'Modo Administrador'}
+              </p>
             </div>
             <div className="flex items-center gap-6">
               <div className="text-right">
@@ -615,7 +664,9 @@ export function GameAdmin({ room }: GameAdminProps) {
         <div className="p-6">
           <Card className="bg-white/10 backdrop-blur-sm border-white/20">
             <CardHeader>
-              <CardTitle className="text-white text-center text-2xl">Roleta de Números</CardTitle>
+              <CardTitle className="text-white text-center text-2xl">
+                {isChristmas ? '🎄 Roleta de Números de Natal 🎄' : 'Roleta de Números'}
+              </CardTitle>
             </CardHeader>
             <CardContent className="text-center">
               <div className="mb-6">
@@ -655,10 +706,10 @@ export function GameAdmin({ room }: GameAdminProps) {
                   onClick={handleDrawNumber}
                   disabled={isDrawing || currentRoom.drawn_numbers.length >= 90}
                   size="lg"
-                  className="bg-green-600 hover:bg-green-700 text-white font-bold text-xl px-8 py-4"
+                  className={`${isChristmas ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'} text-white font-bold text-xl px-8 py-4`}
                 >
-                  <Icon icon="material-symbols:casino" className="mr-2 text-2xl" />
-                  {isDrawing ? 'Girando...' : 'Sortear Número'}
+                  {isChristmas ? '🎄' : <Icon icon="material-symbols:casino" className="mr-2 text-2xl" />}
+                  {isDrawing ? 'Girando...' : isChristmas ? 'Sortear Número de Natal!' : 'Sortear Número'}
                 </Button>
               </div>
             </CardContent>
