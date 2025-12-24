@@ -2,20 +2,12 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from '@iconify/react'
 import { QRCodeSVG } from 'qrcode.react'
-import Avatar, { genConfig } from 'react-nice-avatar'
+import Avatar from 'react-nice-avatar'
 import { Button } from '~/components/ui/button'
 import { toast } from 'sonner'
 import { useUpdateRoomStatus } from '~/hooks/useRoom'
 import { supabase } from '~/lib/supabase/client'
 import type { Player } from '~/types/game'
-
-interface Player {
-  id: number
-  name: string
-  room_id: number
-  is_host: boolean
-  key?: string
-}
 
 interface Room {
   id: number
@@ -146,7 +138,7 @@ export function WaitingRoomAdmin({ room, onGameStart }: WaitingRoomAdminProps) {
     }
   }, [room.id])
 
-  const roomUrl = window.location.href
+  const roomUrl = `https://dia-de-bingo.vercel.app/room/${room.code}`
 
   const handleStartGame = () => {
     updateStatusMutation.mutate({ 
@@ -161,7 +153,7 @@ export function WaitingRoomAdmin({ room, onGameStart }: WaitingRoomAdminProps) {
   }
 
   const handleCopyRoomUrl = () => {
-    navigator.clipboard.writeText(`https://dia-de-bingo.vercel.app/room/${room.code}`)
+    navigator.clipboard.writeText(roomUrl)
     toast.success('URL da sala copiada para a área de transferência!')
   }
 
@@ -180,7 +172,7 @@ export function WaitingRoomAdmin({ room, onGameStart }: WaitingRoomAdminProps) {
       <header className="p-4 bg-white/10 backdrop-blur-sm text-white">
         <div className="max-w-7xl mx-auto grid grid-cols-3 items-center gap-4">
           <div className="text-left">
-            <p className="font-semibold hidden md:block">Entre em <br></br> <span className="font-bold text-xl">dia-de-bingo.vercel.app/room/{room.code}</span></p>
+            <p className="font-semibold hidden md:block">Entre em <br></br> <span className="font-bold text-xl">{roomUrl}</span></p>
           </div>
           <div className="text-center col-start-2">
             <p className="font-bold text-lg">PIN do jogo:</p>
