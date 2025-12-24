@@ -12,7 +12,6 @@ export function useSignIn() {
       return { success: true }
     },
     onError: (error: any) => {
-      console.error('Sign in error:', error)
       toast.error(error.message || 'Erro ao fazer login')
     },
   })
@@ -36,7 +35,6 @@ export function useSignUp() {
       return { success: true }
     },
     onError: (error: any) => {
-      console.error('Sign up error:', error)
       toast.error(error.message || 'Erro ao criar conta')
     },
   })
@@ -51,7 +49,6 @@ export function useSignOut() {
       return { success: true }
     },
     onError: (error: any) => {
-      console.error('Sign out error:', error)
       toast.error('Erro ao fazer logout')
     },
   })
@@ -67,7 +64,6 @@ export function useResetPassword() {
       return { success: true }
     },
     onError: (error: any) => {
-      console.error('Reset password error:', error)
       toast.error(error.message || 'Erro ao enviar email de redefinição')
     },
   })
@@ -83,7 +79,6 @@ export function useUpdatePassword() {
       return { success: true }
     },
     onError: (error: any) => {
-      console.error('Update password error:', error)
       toast.error(error.message || 'Erro ao atualizar senha')
     },
   })

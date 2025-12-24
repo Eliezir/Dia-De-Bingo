@@ -18,7 +18,6 @@ export const roomKeys = {
 }
 
 const createRoomFn = async (request: CreateRoomRequest): Promise<Room> => {
-  // Get the current session
   const { data: { session } } = await supabase.auth.getSession()
   
   if (!session) {
@@ -36,7 +35,6 @@ const createRoomFn = async (request: CreateRoomRequest): Promise<Room> => {
     throw new Error(error.message)
   }
 
-  // Return the first room from the response
   const room = data?.data?.[0]
   if (!room) {
     throw new Error('No room data returned')
@@ -71,7 +69,6 @@ export const useCreateRoom = () => {
     },
     onError: (error: Error) => {
       toast.error(`Falha ao criar sala: ${error.message}`)
-      console.error('Error creating room:', error)
     },
   })
 }
@@ -94,7 +91,6 @@ export const useJoinRoom = () => {
     },
     onError: (error: Error) => {
       toast.error(`Falha ao entrar na sala: ${error.message}`)
-      console.error('Error joining room:', error)
     },
   })
 }
@@ -103,7 +99,7 @@ export const useRoom = (code: string) => {
   return useQuery({
     queryKey: roomKeys.detail(code),
     queryFn: () => getRoomByCodeFn(code),
-    enabled: !!code, // Only run query if code is provided
+    enabled: !!code,
     retry: 1,
   })
 }

@@ -31,7 +31,6 @@ export function WaitingRoomAdmin({ room, onGameStart }: WaitingRoomAdminProps) {
   const [playersData, setPlayersData] = useState<Record<number, Player>>({})
   const updateStatusMutation = useUpdateRoomStatus()
 
-  // Load players data with avatars from Supabase
   useEffect(() => {
     const loadPlayersData = async () => {
       try {
@@ -48,7 +47,6 @@ export function WaitingRoomAdmin({ room, onGameStart }: WaitingRoomAdminProps) {
         })
         setPlayersData(playersMap)
       } catch (error) {
-        console.error('Error loading players data:', error)
       }
     }
 
@@ -64,7 +62,6 @@ export function WaitingRoomAdmin({ room, onGameStart }: WaitingRoomAdminProps) {
       },
     })
 
-    // Listen to presence events
     channel
       .on('presence', { event: 'sync' }, () => {
         const newState = channel.presenceState()
@@ -101,7 +98,6 @@ export function WaitingRoomAdmin({ room, onGameStart }: WaitingRoomAdminProps) {
     }
   }, [room.code, room.host_id])
 
-  // Listen to player avatar updates
   useEffect(() => {
     const playerUpdateChannel = supabase.channel(`admin-player-updates-${room.id}`)
       .on(
@@ -115,13 +111,11 @@ export function WaitingRoomAdmin({ room, onGameStart }: WaitingRoomAdminProps) {
         (payload) => {
           const updatedPlayer = payload.new as Player
           
-          // Update players data
           setPlayersData(prev => ({
             ...prev,
             [updatedPlayer.id]: updatedPlayer
           }))
           
-          // Update online players list with new avatar
           setOnlinePlayers(prev => 
             prev.map(p => 
               p.player_id === updatedPlayer.id 
@@ -168,7 +162,6 @@ export function WaitingRoomAdmin({ room, onGameStart }: WaitingRoomAdminProps) {
         }}
       />
       
-      {/* Header */}
       <header className="p-4 bg-white/10 backdrop-blur-sm text-white">
         <div className="max-w-7xl mx-auto grid grid-cols-3 items-center gap-4">
           <div className="text-left">
@@ -187,7 +180,6 @@ export function WaitingRoomAdmin({ room, onGameStart }: WaitingRoomAdminProps) {
         </div>
       </header>
       
-      {/* Main Content */}
       <main className="flex-1 flex flex-col items-center justify-center p-6">
         <motion.div
           className="text-center mb-8"
@@ -257,7 +249,6 @@ export function WaitingRoomAdmin({ room, onGameStart }: WaitingRoomAdminProps) {
         </div>
       </footer>
 
-      {/* QR Code Modal */}
       {isQrModalOpen && (
         <motion.div
           initial={{ opacity: 0 }}
