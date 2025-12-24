@@ -14,6 +14,32 @@ import { supabase } from '~/lib/supabase/client'
 import { BingoSheet } from './BingoSheet'
 import type { Room, Player } from '~/types/game'
 
+const frasesBingo = {
+  vitoria: [
+    '🎉 BINGO! Temos um vencedor(a)!',
+    '🔥 EXPLODIU! Bingo confirmado!',
+    '🏆 Parabéns! Você completou a cartela!',
+    '💰 Alguém está com sorte hoje! BINGO!',
+    '🎊 Uhuuu! A sorte sorriu para você!',
+    '🚀 Direto para o pódio! BINGO!',
+    '✨ Cartela cheia, coração feliz!',
+    '🌟 Temos um mestre do Bingo entre nós!',
+    '✅ Conferido e aprovado! É BINGO!',
+    '🎈 A vitória chegou! Parabéns pelo Bingo!'
+  ],
+  erro: [
+    '🤡 Alô, é do circo? Temos um palhaço gritando bingo errado!',
+    '🛑 O VAR analisou e detectou: 100% de audácia e 0% de bingo.',
+    '🤔 Marcou o número da Mega Sena na cartela errada, foi?',
+    '🙈 Alguém traz um óculos para esse ser humano, por favor!',
+    '🤏 Faltou isso aqui pra ser verdade... Mentira, faltou muito!',
+    '🤣 O inimigo da vitória ataca novamente!',
+    '🚩 Alarme falso! Voltem para seus lugares, nada para ver aqui.',
+    '🕯️ O desespero é tanto que começou a inventar número!',
+    '🤪 Tá ouvindo vozes ou só queria chamar atenção mesmo?'
+  ]
+} as const
+
 interface GameAdminProps {
   room: Room
 }
@@ -34,6 +60,8 @@ export function GameAdmin({ room }: GameAdminProps) {
   const [showEndGameConfirmation, setShowEndGameConfirmation] = useState(false)
   const [showBackToWaitingConfirmation, setShowBackToWaitingConfirmation] = useState(false)
   const [isMarkingDrawnNumbers, setIsMarkingDrawnNumbers] = useState(false)
+  const [winPhrase, setWinPhrase] = useState<string | null>(null)
+  const [errorPhrase, setErrorPhrase] = useState<string | null>(null)
 
   useEffect(() => {
     loadPlayers()
@@ -175,35 +203,17 @@ export function GameAdmin({ room }: GameAdminProps) {
   }
 
   const handleConfirmBingo = () => {
-    // Check if there's a valid bingo pattern
-    const hasBingo = checkBingoPattern(Array.from(playerMarkedNumbers))
-    
-    if (hasBingo) {
-      setShowWinAnimation(true)
-      
-      // Auto-close after animation
-      setTimeout(() => {
-        setShowWinAnimation(false)
-        setShowBingoCheck(false)
-      }, 3000)
-    } else {
-      setShowLoseAnimation(true)
-      
-      // Auto-close after animation
-      setTimeout(() => {
-        setShowLoseAnimation(false)
-      }, 2000)
-    }
+    const frases = frasesBingo.vitoria
+    const random = frases[Math.floor(Math.random() * frases.length)]
+    setWinPhrase(random)
+    setShowWinAnimation(true)
   }
 
   const handleNotBingo = () => {
+    const frases = frasesBingo.erro
+    const random = frases[Math.floor(Math.random() * frases.length)]
+    setErrorPhrase(random)
     setShowLoseAnimation(true)
-    
-    // Auto-close after animation
-    setTimeout(() => {
-      setShowLoseAnimation(false)
-      setShowBingoCheck(false)
-    }, 2000)
   }
 
   const checkBingoPattern = (markedNumbers: number[]): boolean => {
@@ -520,56 +530,147 @@ export function GameAdmin({ room }: GameAdminProps) {
         </div>
       </div>
 
+      {/* Win Animation - Full Screen */}
+      {showWinAnimation && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 bg-green-500/95 backdrop-blur-sm flex items-center justify-center z-[100]"
+          onClick={() => {
+            setShowWinAnimation(false)
+            setShowBingoCheck(false)
+            setWinPhrase(null)
+          }}
+        >
+          <motion.div 
+            className="text-center w-full h-full flex flex-col items-center justify-center p-8"
+            initial={{ scale: 0.8 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.1 }}
+          >
+            {/* Avatar + Nome */}
+            <motion.div
+              className="flex flex-col items-center gap-3 mb-6"
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.15 }}
+            >
+              {selectedPlayer?.avatar_config ? (
+                <Avatar
+                  style={{ width: '80px', height: '80px' }}
+                  {...(selectedPlayer as any).avatar_config}
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-3xl">
+                  {selectedPlayer?.name?.charAt(0)?.toUpperCase() || '?'}
+                </div>
+              )}
+              <p className="text-2xl md:text-3xl text-white font-semibold">
+                {selectedPlayer?.name}
+              </p>
+            </motion.div>
+
+            <motion.div
+              initial={{ y: -50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+            >
+              <Icon icon="material-symbols:celebration" className="text-9xl md:text-[12rem] text-white mb-8 mx-auto" />
+            </motion.div>
+            <motion.h2 
+              className="text-7xl md:text-9xl font-bold text-white mb-6"
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
+            >
+              BINGO!
+            </motion.h2>
+            <motion.p 
+              className="text-2xl md:text-4xl text-white mb-4 font-semibold max-w-3xl px-4"
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.4 }}
+            >
+              {winPhrase || 'Parabéns pelo bingo!'}
+            </motion.p>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* Lose Animation - Full Screen */}
+      {showLoseAnimation && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 bg-red-500/95 backdrop-blur-sm flex items-center justify-center z-[100]"
+          onClick={() => {
+            setShowLoseAnimation(false)
+            setShowBingoCheck(false)
+            setErrorPhrase(null)
+          }}
+        >
+          <motion.div 
+            className="text-center w-full h-full flex flex-col items-center justify-center p-8"
+            initial={{ scale: 0.8 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.1 }}
+          >
+            {/* Avatar + Nome */}
+            <motion.div
+              className="flex flex-col items-center gap-3 mb-6"
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.15 }}
+            >
+              {selectedPlayer?.avatar_config ? (
+                <Avatar
+                  style={{ width: '80px', height: '80px' }}
+                  {...(selectedPlayer as any).avatar_config}
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-3xl">
+                  {selectedPlayer?.name?.charAt(0)?.toUpperCase() || '?'}
+                </div>
+              )}
+              <p className="text-2xl md:text-3xl text-white font-semibold">
+                {selectedPlayer?.name}
+              </p>
+            </motion.div>
+            <motion.div
+              initial={{ y: -50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+            >
+              <Icon icon="material-symbols:close" className="text-9xl md:text-[12rem] text-white mb-8 mx-auto" />
+            </motion.div>
+            <motion.h2 
+              className="text-7xl md:text-9xl font-bold text-white mb-6"
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
+            >
+              NÃO É BINGO
+            </motion.h2>
+            <motion.p 
+              className="text-2xl md:text-4xl text-white mb-4 font-semibold max-w-3xl px-4"
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.4 }}
+            >
+              {errorPhrase || 'Verificação negada'}
+            </motion.p>
+          </motion.div>
+        </motion.div>
+      )}
+
       {/* Bingo Check Dialog */}
-      <Dialog open={showBingoCheck} onOpenChange={setShowBingoCheck}>
+      <Dialog open={showBingoCheck && !showWinAnimation && !showLoseAnimation} onOpenChange={setShowBingoCheck}>
         <DialogContent className="w-7xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl">
               Verificar Bingo - {selectedPlayer?.name}
             </DialogTitle>
           </DialogHeader>
-          
-          {/* Win Animation */}
-          {showWinAnimation && (
-            <motion.div
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="absolute inset-0 bg-green-500/90 backdrop-blur-sm flex items-center justify-center z-50"
-            >
-              <motion.div 
-                className="text-center p-12 bg-white rounded-3xl border border-green-300 shadow-2xl"
-                initial={{ scale: 0.5 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.2 }}
-              >
-                <Icon icon="material-symbols:celebration" className="text-8xl text-green-600 mb-6 mx-auto" />
-                <h2 className="text-6xl font-bold text-green-600 mb-4">BINGO!</h2>
-                <p className="text-2xl text-gray-700 mb-4">{selectedPlayer?.name} venceu! 🎉</p>
-                <p className="text-lg text-gray-600">Parabéns pelo bingo!</p>
-              </motion.div>
-            </motion.div>
-          )}
-
-          {/* Lose Animation */}
-          {showLoseAnimation && (
-            <motion.div
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="absolute inset-0 bg-red-500/90 backdrop-blur-sm flex items-center justify-center z-50"
-            >
-              <motion.div 
-                className="text-center p-12 bg-white rounded-3xl border border-red-300 shadow-2xl"
-                initial={{ scale: 0.5 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.2 }}
-              >
-                <Icon icon="material-symbols:close" className="text-8xl text-red-600 mb-6 mx-auto" />
-                <h2 className="text-6xl font-bold text-red-600 mb-4">NÃO É BINGO</h2>
-                <p className="text-2xl text-gray-700 mb-4">Verificação negada</p>
-                <p className="text-lg text-gray-600">Continue verificando outros jogadores</p>
-              </motion.div>
-            </motion.div>
-          )}
           
           <div className="space-y-6">
             {/* Player Info */}
