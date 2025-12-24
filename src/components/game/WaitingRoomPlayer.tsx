@@ -241,7 +241,7 @@ export function WaitingRoomPlayer({ room, currentPlayer }: WaitingRoomPlayerProp
       <header className="p-4 bg-white/10 backdrop-blur-sm text-white">
         <div className="max-w-7xl mx-auto grid grid-cols-3 items-center gap-4">
           <div className="text-left">
-            <p className="font-semibold hidden md:block">Entre em <span className="font-bold text-2xl">www.dia-de-bingo.vercel.app</span></p>
+            <p className="font-semibold hidden md:block">Entre em <br/><span className="font-bold text-xl">dia-de-bingo.vercel.app/room/{room.code}</span></p>
           </div>
           <div className="text-center col-start-2 flex flex-col items-center justify-center">
             <p className="font-bold text-lg">PIN do jogo:</p>
