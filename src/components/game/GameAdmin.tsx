@@ -465,29 +465,38 @@ export function GameAdmin({ room }: GameAdminProps) {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-20 gap-2 max-h-96 overflow-y-auto">
-                {currentRoom.drawn_numbers.map(num => {
-                  const bingoInfo = formatBingoNumber(num)
-                  return (
-                    <motion.div
-                      key={num}
-                      initial={{ scale: 0, rotate: -180 }}
-                      animate={{ scale: 1, rotate: 0 }}
-                      transition={{
-                        type: "spring",
-                        stiffness: 260,
-                        damping: 20
-                      }}
-                      className="w-12 h-12 bg-white rounded-full flex flex-col items-center justify-center font-bold text-xs"
-                    >
-                      <span className={`text-xs font-bold ${bingoInfo.color}`}>
-                        {bingoInfo.letter}
-                      </span>
-                      <span className="text-blue-500 text-xs">
-                        {bingoInfo.number}
-                      </span>
-                    </motion.div>
-                  )
-                })}
+                {(() => {
+                  const sortedNumbers = [...currentRoom.drawn_numbers].sort((a, b) => a - b)
+                  const lastThreeNumbers = new Set(currentRoom.drawn_numbers.slice(-3))
+                  return sortedNumbers.map(num => {
+                    const bingoInfo = formatBingoNumber(num)
+                    const isLastThree = lastThreeNumbers.has(num)
+                    return (
+                      <motion.div
+                        key={num}
+                        initial={{ scale: 0, rotate: -180 }}
+                        animate={{ scale: 1, rotate: 0 }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 260,
+                          damping: 20
+                        }}
+                        className={`rounded-full flex flex-col items-center justify-center font-bold text-xs border-2 transition-all ${
+                          isLastThree 
+                            ? 'bg-blue-500 text-white border-blue-300 ring-offset-1 w-14 h-14' 
+                            : 'bg-white w-12 h-12 border-gray-200'
+                        }`}
+                      >
+                        <span className={`font-bold ${isLastThree ? 'text-white text-sm' : `text-xs ${bingoInfo.color}`}`}>
+                          {bingoInfo.letter}
+                        </span>
+                        <span className={isLastThree ? 'text-white text-sm' : 'text-blue-500 text-xs'}>
+                          {bingoInfo.number}
+                        </span>
+                      </motion.div>
+                    )
+                  })
+                })()}
               </div>
             </CardContent>
           </Card>
