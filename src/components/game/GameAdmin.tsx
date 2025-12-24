@@ -724,7 +724,7 @@ export function GameAdmin({ room }: GameAdminProps) {
                 
                 <div className="w-1/3 bg-gray-50 border border-gray-200 rounded-lg p-4">
                   <h4 className="font-semibold text-gray-900 mb-3">Números Sorteados ({currentRoom.drawn_numbers.length})</h4>
-                  <div className="grid grid-cols-8 gap-1 max-h-80 overflow-y-auto">
+                  <div className="grid grid-cols-6 gap-1 max-h-80 overflow-y-auto">
                     {currentRoom.drawn_numbers
                       .sort((a, b) => a - b) 
                       .map(num => {
@@ -732,14 +732,14 @@ export function GameAdmin({ room }: GameAdminProps) {
                         return (
                           <div
                             key={num}
-                            className={`w-8 h-8 rounded-full flex flex-col items-center justify-center text-xs font-bold text-white ${
+                            className={`min-w-8 min-h-8 rounded-full flex flex-col items-center justify-center text-xs font-bold text-white aspect-square ${
                               playerMarkedNumbers.has(num) ? 'bg-green-500' : 'bg-blue-500'
                             }`}
                           >
-                            <span className="text-[10px] font-bold">
+                            <span className="text-[clamp(0.5rem,2.5vw,1rem)] font-bold leading-none">
                               {bingoInfo.letter}
                             </span>
-                            <span className="text-[10px]">
+                            <span className="text-[clamp(0.625rem,3vw,1.25rem)] leading-none">
                               {bingoInfo.number}
                             </span>
                           </div>
@@ -754,15 +754,7 @@ export function GameAdmin({ room }: GameAdminProps) {
             </div>
             
             {/* Verification Steps */}
-            {!isVerifyingBingo ? (
-              <div className="space-y-4">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h4 className="font-semibold text-blue-900 mb-2">Passo 1: Visualização</h4>
-                  <p className="text-blue-700 text-sm">
-                    Visualize a cartela do jogador acima. Use o botão para marcar automaticamente os números sorteados.
-                  </p>
-                </div>
-                
+            {!isVerifyingBingo ? (                
                 <div className="flex justify-center">
                   <Button
                     onClick={animateMarkDrawnNumbers}
@@ -774,16 +766,8 @@ export function GameAdmin({ room }: GameAdminProps) {
                     {isMarkingDrawnNumbers ? 'Marcando números...' : 'Marcar Números Sorteados'}
                   </Button>
                 </div>
-              </div>
             ) : (
-              <div className="space-y-4">
-                <div className="bg-yellow-50 p-4 rounded-lg">
-                  <h4 className="font-semibold text-yellow-900 mb-2">Passo 2: Verificação</h4>
-                  <p className="text-yellow-700 text-sm">
-                    Os números sorteados foram marcados. Verifique se há um bingo válido e confirme sua decisão.
-                  </p>
-                </div>
-                
+              <div className="space-y-4">                
                 <div className="flex justify-center gap-4">
                   <Button
                     onClick={() => setIsVerifyingBingo(false)}
