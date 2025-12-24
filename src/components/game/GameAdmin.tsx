@@ -13,39 +13,16 @@ import { toast } from 'sonner'
 import { supabase } from '~/lib/supabase/client'
 import { BingoSheet } from './BingoSheet'
 import { BingoResult } from './BingoResult'
+import { useAudioPlayer } from '~/hooks/useAudioPlayer'
+import { getRandomAudio, markAudioAsUsed, getRandomPhrase, markPhraseAsUsed } from '~/utils/audioManager'
 import type { Room, Player } from '~/types/game'
-
-const frasesBingo = {
-  vitoria: [
-    '🎉 BINGO! Temos um vencedor(a)!',
-    '🔥 EXPLODIU! Bingo confirmado!',
-    '🏆 Parabéns! Você completou a cartela!',
-    '💰 Alguém está com sorte hoje! BINGO!',
-    '🎊 Uhuuu! A sorte sorriu para você!',
-    '🚀 Direto para o pódio! BINGO!',
-    '✨ Cartela cheia, coração feliz!',
-    '🌟 Temos um mestre do Bingo entre nós!',
-    '✅ Conferido e aprovado! É BINGO!',
-    '🎈 A vitória chegou! Parabéns pelo Bingo!'
-  ],
-  erro: [
-    '🤡 Alô, é do circo? Temos um palhaço gritando bingo errado!',
-    '🛑 O VAR analisou e detectou: 100% de audácia e 0% de bingo.',
-    '🤔 Marcou o número da Mega Sena na cartela errada, foi?',
-    '🙈 Alguém traz um óculos para esse ser humano, por favor!',
-    '🤏 Faltou isso aqui pra ser verdade... Mentira, faltou muito!',
-    '🤣 O inimigo da vitória ataca novamente!',
-    '🚩 Alarme falso! Voltem para seus lugares, nada para ver aqui.',
-    '🕯️ O desespero é tanto que começou a inventar número!',
-    '🤪 Tá ouvindo vozes ou só queria chamar atenção mesmo?'
-  ]
-} as const
 
 interface GameAdminProps {
   room: Room
 }
 
 export function GameAdmin({ room }: GameAdminProps) {
+  const { playAudio } = useAudioPlayer()
   const [currentRoom, setCurrentRoom] = useState(room)
   const [isDrawing, setIsDrawing] = useState(false)
   const [players, setPlayers] = useState<Player[]>([])
@@ -290,10 +267,16 @@ export function GameAdmin({ room }: GameAdminProps) {
   const handleConfirmBingo = async () => {
     if (!selectedPlayer) return
 
-    const frases = frasesBingo.vitoria
-    const selectedPhrase = frases[Math.floor(Math.random() * frases.length)]
+    const selectedPhrase = getRandomPhrase('win', room.code)
+    const selectedAudio = getRandomAudio(room.code, 'win')
+
+    markPhraseAsUsed(room.code, 'win', selectedPhrase)
+    markAudioAsUsed(room.code, 'win', selectedAudio)
 
     try {
+      playAudio(selectedAudio).catch(() => {
+      })
+
       const playerClaims = bingoClaims.filter(c => c.playerId === selectedPlayer.id)
       const claim = playerClaims[playerClaims.length - 1]
       
@@ -339,11 +322,6 @@ export function GameAdmin({ room }: GameAdminProps) {
       setShowBingoResult(true)
       setShowBingoCheck(false)
       setSelectedPlayer(null)
-
-      setTimeout(() => {
-        setShowBingoResult(false)
-        setBingoResult(null)
-      }, 5000)
     } catch (error) {
       toast.error('Erro ao confirmar bingo')
     }
@@ -352,10 +330,16 @@ export function GameAdmin({ room }: GameAdminProps) {
   const handleNotBingo = async () => {
     if (!selectedPlayer) return
 
-    const frases = frasesBingo.erro
-    const selectedPhrase = frases[Math.floor(Math.random() * frases.length)]
+    const selectedPhrase = getRandomPhrase('lose', room.code)
+    const selectedAudio = getRandomAudio(room.code, 'lose')
+
+    markPhraseAsUsed(room.code, 'lose', selectedPhrase)
+    markAudioAsUsed(room.code, 'lose', selectedAudio)
 
     try {
+      playAudio(selectedAudio).catch(() => {
+      })
+
       const playerClaims = bingoClaims.filter(c => c.playerId === selectedPlayer.id)
       const claim = playerClaims[playerClaims.length - 1]
       
@@ -401,11 +385,6 @@ export function GameAdmin({ room }: GameAdminProps) {
       setShowBingoResult(true)
       setShowBingoCheck(false)
       setSelectedPlayer(null)
-
-      setTimeout(() => {
-        setShowBingoResult(false)
-        setBingoResult(null)
-      }, 5000)
     } catch (error) {
       toast.error('Erro ao rejeitar bingo')
     }
