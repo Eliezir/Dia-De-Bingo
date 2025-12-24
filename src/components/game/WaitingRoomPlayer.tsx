@@ -9,6 +9,7 @@ import { supabase } from '~/lib/supabase/client'
 import { BingoSheet } from './BingoSheet'
 import { AvatarBuilder } from './AvatarBuilder'
 import { savePlayerToStorage, clearMarkedNumbersStorage, saveAvatarConfig, getAvatarConfig } from '~/utils/playerStorage'
+import { useUpdatePlayerAvatar } from '~/hooks/useRoom'
 import type { Room, Player } from '~/types/game'
 
 type AvatarConfig = ReturnType<typeof genConfig>
@@ -22,10 +23,41 @@ export function WaitingRoomPlayer({ room, currentPlayer }: WaitingRoomPlayerProp
   const [onlinePlayers, setOnlinePlayers] = useState<any[]>([])
   const [bingoSheet, setBingoSheet] = useState<number[][]>([])
   const [avatarConfig, setAvatarConfig] = useState<AvatarConfig | null>(() => {
+    // Try to load from currentPlayer first (from Supabase)
+    if (currentPlayer.avatar_config) {
+      return currentPlayer.avatar_config
+    }
+    // Fallback to localStorage
     const saved = getAvatarConfig(currentPlayer.id)
     if (saved) return saved
+    // Generate new if nothing found
     return genConfig(currentPlayer.name)
   })
+  const updateAvatarMutation = useUpdatePlayerAvatar()
+
+  // Load avatar from Supabase on mount
+  useEffect(() => {
+    const loadAvatarFromSupabase = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('player')
+          .select('avatar_config')
+          .eq('id', currentPlayer.id)
+          .single()
+
+        if (error) throw error
+
+        if (data?.avatar_config) {
+          setAvatarConfig(data.avatar_config)
+          saveAvatarConfig(currentPlayer.id, data.avatar_config)
+        }
+      } catch (error) {
+        console.error('Error loading avatar from Supabase:', error)
+      }
+    }
+
+    loadAvatarFromSupabase()
+  }, [currentPlayer.id])
 
   // Use the bingo sheet from the player data
   useEffect(() => {
@@ -73,6 +105,7 @@ export function WaitingRoomPlayer({ room, currentPlayer }: WaitingRoomPlayerProp
           name: currentPlayer.name,
           is_host: false,
           player_id: currentPlayer.id,
+          avatar_config: avatarConfig,
         })
       }
     })
@@ -80,7 +113,7 @@ export function WaitingRoomPlayer({ room, currentPlayer }: WaitingRoomPlayerProp
     return () => {
       channel.unsubscribe()
     }
-  }, [room.code, currentPlayer.id, currentPlayer.name])
+  }, [room.code, currentPlayer.id, currentPlayer.name, avatarConfig])
 
   // Listen to room status changes
   useEffect(() => {
@@ -106,6 +139,43 @@ export function WaitingRoomPlayer({ room, currentPlayer }: WaitingRoomPlayerProp
       roomStatusChannel.unsubscribe()
     }
   }, [room.id, room.code])
+
+  // Listen to player avatar updates
+  useEffect(() => {
+    const playerUpdateChannel = supabase.channel(`player-avatar-updates-${room.id}`)
+      .on(
+        'postgres_changes',
+        { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'player', 
+          filter: `room_id=eq.${room.id}` 
+        },
+        (payload) => {
+          const updatedPlayer = payload.new as Player
+          
+          // If this is the current player, update local state
+          if (updatedPlayer.id === currentPlayer.id && updatedPlayer.avatar_config) {
+            setAvatarConfig(updatedPlayer.avatar_config)
+            saveAvatarConfig(currentPlayer.id, updatedPlayer.avatar_config)
+          }
+          
+          // Update online players list with new avatar
+          setOnlinePlayers(prev => 
+            prev.map(p => 
+              p.player_id === updatedPlayer.id 
+                ? { ...p, avatar_config: updatedPlayer.avatar_config }
+                : p
+            )
+          )
+        }
+      )
+      .subscribe()
+      
+    return () => {
+      playerUpdateChannel.unsubscribe()
+    }
+  }, [room.id, currentPlayer.id])
 
   const handleGenerateNewSheet = async () => {
     try {
@@ -228,10 +298,23 @@ export function WaitingRoomPlayer({ room, currentPlayer }: WaitingRoomPlayerProp
           <div className="flex justify-center mt-4">
             <AvatarBuilder
               currentConfig={avatarConfig}
-              onSave={(config) => {
+              onSave={async (config) => {
+                // Save to localStorage immediately for instant feedback
                 setAvatarConfig(config)
                 saveAvatarConfig(currentPlayer.id, config)
-                toast.success('Avatar salvo com sucesso!')
+                
+                // Save to Supabase
+                try {
+                  await updateAvatarMutation.mutateAsync({
+                    playerId: currentPlayer.id,
+                    avatarConfig: config
+                  })
+                  
+                  toast.success('Avatar salvo com sucesso!')
+                } catch (error) {
+                  console.error('Error saving avatar to Supabase:', error)
+                  toast.error('Erro ao salvar avatar no servidor, mas foi salvo localmente')
+                }
               }}
               playerName={currentPlayer.name}
             />
@@ -279,14 +362,24 @@ export function WaitingRoomPlayer({ room, currentPlayer }: WaitingRoomPlayerProp
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {onlinePlayers.map((player, index) => (
-              <div key={`${player.name}-${index}`} className="p-4 rounded-lg bg-black/20 text-white flex items-center justify-center">
+              <div key={`${player.name}-${index}`} className="p-4 rounded-lg bg-black/20 text-white flex flex-col items-center justify-center gap-2">
+                {player.avatar_config ? (
+                  <Avatar
+                    style={{ width: '48px', height: '48px' }}
+                    {...player.avatar_config}
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
+                    {player.name?.charAt(0)?.toUpperCase() || '?'}
+                  </div>
+                )}
                 <div className="text-center">
                   <div className="font-bold">{player.name}</div>
                   {player.player_id === currentPlayer.id && (
-                    <div className="text-xs text-blue-600">Você</div>
+                    <div className="text-xs text-blue-400">Você</div>
                   )}
                   {player.is_host && (
-                    <div className="text-xs text-blue-600">Anfitrião</div>
+                    <div className="text-xs text-yellow-400">Anfitrião</div>
                   )}
                 </div>
               </div>

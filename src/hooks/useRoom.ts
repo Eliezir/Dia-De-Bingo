@@ -136,4 +136,23 @@ export const useUpdateRoomStatus = () => {
       toast.error(`Erro ao atualizar sala: ${error.message}`)
     },
   })
+}
+
+export const useUpdatePlayerAvatar = () => {
+  return useMutation({
+    mutationFn: async ({ playerId, avatarConfig }: { playerId: number; avatarConfig: any }) => {
+      const { data, error } = await supabase
+        .from('player')
+        .update({ avatar_config: avatarConfig })
+        .eq('id', playerId)
+        .select()
+        .single()
+
+      if (error) throw new Error(error.message)
+      return data
+    },
+    onError: (error: Error) => {
+      toast.error(`Erro ao salvar avatar: ${error.message}`)
+    },
+  })
 } 

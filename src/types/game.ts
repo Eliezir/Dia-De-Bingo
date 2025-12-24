@@ -3,6 +3,7 @@ export interface Player {
   name: string
   room_id: number
   bingo_sheet: number[][]
+  avatar_config?: any // AvatarConfig from react-nice-avatar
 }
 
 export interface Room {

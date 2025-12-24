@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from '@iconify/react'
 import { QRCodeSVG } from 'qrcode.react'
+import Avatar, { genConfig } from 'react-nice-avatar'
 import { Button } from '~/components/ui/button'
 import { toast } from 'sonner'
 import { useUpdateRoomStatus } from '~/hooks/useRoom'
 import { supabase } from '~/lib/supabase/client'
+import type { Player } from '~/types/game'
 
 interface Player {
   id: number
@@ -34,7 +36,32 @@ interface WaitingRoomAdminProps {
 export function WaitingRoomAdmin({ room, onGameStart }: WaitingRoomAdminProps) {
   const [isQrModalOpen, setQrModalOpen] = useState(false)
   const [onlinePlayers, setOnlinePlayers] = useState<any[]>([])
+  const [playersData, setPlayersData] = useState<Record<number, Player>>({})
   const updateStatusMutation = useUpdateRoomStatus()
+
+  // Load players data with avatars from Supabase
+  useEffect(() => {
+    const loadPlayersData = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('player')
+          .select('id, name, avatar_config')
+          .eq('room_id', room.id)
+
+        if (error) throw error
+
+        const playersMap: Record<number, Player> = {}
+        data?.forEach((player: any) => {
+          playersMap[player.id] = player
+        })
+        setPlayersData(playersMap)
+      } catch (error) {
+        console.error('Error loading players data:', error)
+      }
+    }
+
+    loadPlayersData()
+  }, [room.id])
 
   useEffect(() => {
     const channel = supabase.channel(`room:${room.code}`, {
@@ -81,6 +108,43 @@ export function WaitingRoomAdmin({ room, onGameStart }: WaitingRoomAdminProps) {
       channel.unsubscribe()
     }
   }, [room.code, room.host_id])
+
+  // Listen to player avatar updates
+  useEffect(() => {
+    const playerUpdateChannel = supabase.channel(`admin-player-updates-${room.id}`)
+      .on(
+        'postgres_changes',
+        { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'player', 
+          filter: `room_id=eq.${room.id}` 
+        },
+        (payload) => {
+          const updatedPlayer = payload.new as Player
+          
+          // Update players data
+          setPlayersData(prev => ({
+            ...prev,
+            [updatedPlayer.id]: updatedPlayer
+          }))
+          
+          // Update online players list with new avatar
+          setOnlinePlayers(prev => 
+            prev.map(p => 
+              p.player_id === updatedPlayer.id 
+                ? { ...p, avatar_config: updatedPlayer.avatar_config }
+                : p
+            )
+          )
+        }
+      )
+      .subscribe()
+      
+    return () => {
+      playerUpdateChannel.unsubscribe()
+    }
+  }, [room.id])
 
   const roomUrl = window.location.href
 
@@ -154,16 +218,31 @@ export function WaitingRoomAdmin({ room, onGameStart }: WaitingRoomAdminProps) {
           transition={{ duration: 0.6, delay: 0.2 }}
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {onlinePlayers.map((player, index) => (
-              <div key={`${player.name}-${index}`} className="p-4 rounded-lg bg-black/20 text-white flex items-center justify-center">
-                <div className="text-center">
-                  <div className="font-bold">{player.name}</div>
-                  {player.is_host && (
-                    <div className="text-xs text-blue-600">Anfitrião</div>
+            {onlinePlayers.map((player, index) => {
+              const playerData = playersData[player.player_id]
+              const avatarConfig = player.avatar_config || playerData?.avatar_config
+              
+              return (
+                <div key={`${player.name}-${index}`} className="p-4 rounded-lg bg-black/20 text-white flex flex-col items-center justify-center gap-2">
+                  {avatarConfig ? (
+                    <Avatar
+                      style={{ width: '48px', height: '48px' }}
+                      {...avatarConfig}
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
+                      {player.name?.charAt(0)?.toUpperCase() || '?'}
+                    </div>
                   )}
+                  <div className="text-center">
+                    <div className="font-bold">{player.name}</div>
+                    {player.is_host && (
+                      <div className="text-xs text-yellow-400">Anfitrião</div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </motion.div>
       </main>
