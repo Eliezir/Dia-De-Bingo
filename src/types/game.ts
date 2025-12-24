@@ -3,7 +3,7 @@ export interface Player {
   name: string
   room_id: number
   bingo_sheet: number[][]
-  avatar_config?: any // AvatarConfig from react-nice-avatar
+  avatar_config?: any
 }
 
 export interface Room {
@@ -15,4 +15,16 @@ export interface Room {
   created_at: string
   host_id: string
   round: number
+}
+
+export type BingoClaimStatus = 'pending' | 'checking' | 'confirmed' | 'rejected'
+
+export interface BingoClaim {
+  id: number
+  created_at: string
+  player_id: number
+  room_id: number
+  status: BingoClaimStatus
+  result_phrase: string | null
+  checked_at: string | null
 } 

@@ -12,6 +12,7 @@ import { ConfirmationModal } from '~/components/ui/confirmation-modal'
 import { toast } from 'sonner'
 import { supabase } from '~/lib/supabase/client'
 import { BingoSheet } from './BingoSheet'
+import { BingoResult } from './BingoResult'
 import type { Room, Player } from '~/types/game'
 
 const frasesBingo = {
@@ -55,16 +56,31 @@ export function GameAdmin({ room }: GameAdminProps) {
   const [isRouletteSpinning, setIsRouletteSpinning] = useState(false)
   const [rouletteNumber, setRouletteNumber] = useState<number | null>(null)
   const [isVerifyingBingo, setIsVerifyingBingo] = useState(false)
-  const [showWinAnimation, setShowWinAnimation] = useState(false)
-  const [showLoseAnimation, setShowLoseAnimation] = useState(false)
+  const [showBingoResult, setShowBingoResult] = useState(false)
+  const [bingoResult, setBingoResult] = useState<{
+    result: 'win' | 'lose'
+    playerName: string
+    avatarConfig?: any
+    phrase: string
+  } | null>(null)
   const [showEndGameConfirmation, setShowEndGameConfirmation] = useState(false)
   const [showBackToWaitingConfirmation, setShowBackToWaitingConfirmation] = useState(false)
   const [isMarkingDrawnNumbers, setIsMarkingDrawnNumbers] = useState(false)
-  const [winPhrase, setWinPhrase] = useState<string | null>(null)
-  const [errorPhrase, setErrorPhrase] = useState<string | null>(null)
+  const [bingoClaims, setBingoClaims] = useState<
+    { claimId: number; playerId: number; name: string; avatarConfig?: any; status: 'pending' | 'win' | 'lose'; createdAt?: string; resultPhrase?: string | null }[]
+  >([])
+  const [bingoChannel, setBingoChannel] = useState<any>(null)
+  const [showBingoClaimsModal, setShowBingoClaimsModal] = useState(false)
 
   useEffect(() => {
     loadPlayers()
+  }, [])
+
+  useEffect(() => {
+    loadBingoClaims()
+  }, [currentRoom.round])
+
+  useEffect(() => {
     const roomSubscription = subscribeToRoomChanges()
     const playerSubscription = subscribeToPlayerChanges()
 
@@ -73,6 +89,40 @@ export function GameAdmin({ room }: GameAdminProps) {
       playerSubscription?.unsubscribe()
     }
   }, [])
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`bingo:${room.id}`)
+      .on('broadcast', { event: 'bingo-claim' }, async (event) => {
+        const payload = event.payload as { playerId: number; name: string; avatarConfig?: any; claimId: number; round?: number }
+        if (payload.round && payload.round !== currentRoom.round) return
+        await loadBingoClaims()
+        toast.success(`${payload.name} chamou BINGO!`, {
+          duration: 8000,
+          className: 'bg-yellow-500 text-black font-bold text-lg border-4 border-yellow-600 shadow-2xl',
+          style: {
+            animation: 'pulse 2s infinite',
+          },
+          action: {
+            label: 'Verificar',
+            onClick: () => {
+              const player = players.find(p => p.id === payload.playerId)
+              if (player) handleCheckPlayerBingo(player)
+            }
+          },
+          icon: '🎯',
+        })
+      })
+      .on('broadcast', { event: 'bingo-result' }, async (event) => {
+        await loadBingoClaims()
+      })
+      .subscribe()
+
+    setBingoChannel(channel)
+    return () => {
+      channel.unsubscribe()
+    }
+  }, [room.id, players, currentRoom.round])
 
   const loadPlayers = async () => {
     const { data, error } = await supabase
@@ -88,6 +138,41 @@ export function GameAdmin({ room }: GameAdminProps) {
     setPlayers(data || [])
   }
 
+  const loadBingoClaims = async () => {
+    const { data, error } = await supabase
+      .from('bingo_claims')
+      .select(`
+        *,
+        player:player_id (
+          id,
+          name,
+          avatar_config
+        )
+      `)
+      .eq('room_id', room.id)
+      .eq('round', currentRoom.round)
+      .order('created_at', { ascending: true })
+
+    if (error) {
+      return
+    }
+
+    const claims = data?.map(claim => ({
+      claimId: claim.id,
+      playerId: claim.player_id,
+      name: (claim.player as any)?.name || 'Unknown',
+      avatarConfig: (claim.player as any)?.avatar_config,
+      status: claim.status === 'confirmed' ? 'win' as const : claim.status === 'rejected' ? 'lose' as const : 'pending' as const,
+      createdAt: claim.created_at,
+      resultPhrase: claim.result_phrase
+    })) || []
+
+    setBingoClaims(claims.sort((a, b) => {
+      if (!a.createdAt || !b.createdAt) return 0
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    }))
+  }
+
   const subscribeToRoomChanges = () => {
     const channel = supabase
       .channel(`room:${room.id}`)
@@ -98,7 +183,12 @@ export function GameAdmin({ room }: GameAdminProps) {
         filter: `id=eq.${room.id}`
       }, (payload) => {
         if (payload.new) {
-          setCurrentRoom(payload.new as Room)
+          const updatedRoom = payload.new as Room
+          const previousRound = currentRoom.round
+          setCurrentRoom(updatedRoom)
+          if (updatedRoom.round !== previousRound) {
+            loadBingoClaims()
+          }
         }
       })
       .subscribe()
@@ -128,7 +218,6 @@ export function GameAdmin({ room }: GameAdminProps) {
     setIsDrawing(true)
     setIsRouletteSpinning(true)
 
-    // Simulate roulette spinning
     setTimeout(() => {
       setIsRouletteSpinning(false)
       setIsDrawing(false)
@@ -150,7 +239,7 @@ export function GameAdmin({ room }: GameAdminProps) {
     }
   }
 
-  const handleCheckPlayerBingo = (player: Player) => {
+  const handleCheckPlayerBingo = async (player: Player) => {
     setSelectedPlayer(player)
     setPlayerMarkedNumbers(new Set())
     setIsVerifyingBingo(false)
@@ -181,39 +270,145 @@ export function GameAdmin({ room }: GameAdminProps) {
     const sheet = selectedPlayer.bingo_sheet
     const drawnNumbers = currentRoom.drawn_numbers
 
-    // Animate checking all numbers on the sheet and mark the ones that were drawn
     for (let row = 0; row < 5; row++) {
       for (let col = 0; col < 5; col++) {
         const number = sheet[row][col]
         
-        // Check if this number was drawn
         if (drawnNumbers.includes(number)) {
-          // Mark this cell as verified with a delay for suspense
           await new Promise(resolve => setTimeout(resolve, 500))
           setPlayerMarkedNumbers(prev => new Set([...prev, number]))
         }
       }
     }
 
-    // Wait a moment after all numbers are marked for dramatic effect
     await new Promise(resolve => setTimeout(resolve, 1000))
     
     setIsMarkingDrawnNumbers(false)
     setIsVerifyingBingo(true)
   }
 
-  const handleConfirmBingo = () => {
+  const handleConfirmBingo = async () => {
+    if (!selectedPlayer) return
+
     const frases = frasesBingo.vitoria
-    const random = frases[Math.floor(Math.random() * frases.length)]
-    setWinPhrase(random)
-    setShowWinAnimation(true)
+    const selectedPhrase = frases[Math.floor(Math.random() * frases.length)]
+
+    try {
+      const playerClaims = bingoClaims.filter(c => c.playerId === selectedPlayer.id)
+      const claim = playerClaims[playerClaims.length - 1]
+      
+      if (claim) {
+        setBingoClaims(prev => prev.map(c => 
+          c.claimId === claim.claimId 
+            ? { ...c, status: 'win' as const, resultPhrase: selectedPhrase }
+            : c
+        ))
+
+        const { error } = await supabase
+          .from('bingo_claims')
+          .update({
+            status: 'confirmed',
+            result_phrase: selectedPhrase,
+            checked_at: new Date().toISOString()
+          })
+          .eq('id', claim.claimId)
+
+        if (error) throw error
+      }
+
+      if (bingoChannel) {
+        bingoChannel.send({
+          type: 'broadcast',
+          event: 'bingo-result',
+          payload: {
+            playerId: selectedPlayer.id,
+            result: 'win',
+            phrase: selectedPhrase,
+            playerName: selectedPlayer.name,
+            avatarConfig: selectedPlayer.avatar_config
+          }
+        })
+      }
+
+      setBingoResult({
+        result: 'win',
+        playerName: selectedPlayer.name,
+        avatarConfig: selectedPlayer.avatar_config,
+        phrase: selectedPhrase
+      })
+      setShowBingoResult(true)
+      setShowBingoCheck(false)
+      setSelectedPlayer(null)
+
+      setTimeout(() => {
+        setShowBingoResult(false)
+        setBingoResult(null)
+      }, 5000)
+    } catch (error) {
+      toast.error('Erro ao confirmar bingo')
+    }
   }
 
-  const handleNotBingo = () => {
+  const handleNotBingo = async () => {
+    if (!selectedPlayer) return
+
     const frases = frasesBingo.erro
-    const random = frases[Math.floor(Math.random() * frases.length)]
-    setErrorPhrase(random)
-    setShowLoseAnimation(true)
+    const selectedPhrase = frases[Math.floor(Math.random() * frases.length)]
+
+    try {
+      const playerClaims = bingoClaims.filter(c => c.playerId === selectedPlayer.id)
+      const claim = playerClaims[playerClaims.length - 1]
+      
+      if (claim) {
+        setBingoClaims(prev => prev.map(c => 
+          c.claimId === claim.claimId 
+            ? { ...c, status: 'lose' as const, resultPhrase: selectedPhrase }
+            : c
+        ))
+
+        const { error } = await supabase
+          .from('bingo_claims')
+          .update({
+            status: 'rejected',
+            result_phrase: selectedPhrase,
+            checked_at: new Date().toISOString()
+          })
+          .eq('id', claim.claimId)
+
+        if (error) throw error
+      }
+
+      if (bingoChannel) {
+        bingoChannel.send({
+          type: 'broadcast',
+          event: 'bingo-result',
+          payload: {
+            playerId: selectedPlayer.id,
+            result: 'lose',
+            phrase: selectedPhrase,
+            playerName: selectedPlayer.name,
+            avatarConfig: selectedPlayer.avatar_config
+          }
+        })
+      }
+
+      setBingoResult({
+        result: 'lose',
+        playerName: selectedPlayer.name,
+        avatarConfig: selectedPlayer.avatar_config,
+        phrase: selectedPhrase
+      })
+      setShowBingoResult(true)
+      setShowBingoCheck(false)
+      setSelectedPlayer(null)
+
+      setTimeout(() => {
+        setShowBingoResult(false)
+        setBingoResult(null)
+      }, 5000)
+    } catch (error) {
+      toast.error('Erro ao rejeitar bingo')
+    }
   }
 
   const checkBingoPattern = (markedNumbers: number[]): boolean => {
@@ -222,17 +417,14 @@ export function GameAdmin({ room }: GameAdminProps) {
     const sheet = selectedPlayer.bingo_sheet
     const markedSet = new Set(markedNumbers)
 
-    // Check horizontal lines
     for (let row = 0; row < 5; row++) {
       if (sheet[row].every(num => markedSet.has(num))) return true
     }
 
-    // Check vertical lines
     for (let col = 0; col < 5; col++) {
       if (sheet.every(row => markedSet.has(row[col]))) return true
     }
 
-    // Check diagonals
     if (sheet.every((row, i) => markedSet.has(row[i]))) return true
     if (sheet.every((row, i) => markedSet.has(row[4 - i]))) return true
 
@@ -287,7 +479,6 @@ export function GameAdmin({ room }: GameAdminProps) {
     player.name.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  // Get Bingo letter for a number based on traditional rules
   const getBingoLetter = (number: number): string => {
     if (number >= 1 && number <= 18) return 'B'
     if (number >= 19 && number <= 36) return 'I'
@@ -297,7 +488,6 @@ export function GameAdmin({ room }: GameAdminProps) {
     return ''
   }
 
-  // Get color for Bingo letter
   const getBingoLetterColor = (letter: string): string => {
     switch (letter) {
       case 'B': return 'text-blue-600'
@@ -309,7 +499,6 @@ export function GameAdmin({ room }: GameAdminProps) {
     }
   }
 
-  // Format number with Bingo letter
   const formatBingoNumber = (number: number): { letter: string; number: number; color: string } => {
     const letter = getBingoLetter(number)
     const color = getBingoLetterColor(letter)
@@ -318,9 +507,7 @@ export function GameAdmin({ room }: GameAdminProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-400 flex">
-      {/* Main Game Area */}
       <div className="flex-1 flex flex-col">
-        {/* Header */}
         <header className="p-6 bg-white/10 backdrop-blur-sm text-white border-b border-white/20">
           <div className="flex items-center justify-between">
             <div>
@@ -342,6 +529,15 @@ export function GameAdmin({ room }: GameAdminProps) {
                 <div className="text-2xl font-bold">{currentRoom.drawn_numbers.length}/90</div>
               </div>
               <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowBingoClaimsModal(true)}
+                  className={`border-yellow-300 text-yellow-200 bg-yellow-500/10 hover:bg-yellow-500/20 ${bingoClaims.some(c => c.status === 'pending') ? 'animate-pulse' : ''}`}
+                >
+                  <Icon icon="material-symbols:campaign" className="mr-2" />
+                  Bingos chamados
+                </Button>
                 <Sheet>
                   <SheetTrigger asChild>
                     <Button 
@@ -391,15 +587,22 @@ export function GameAdmin({ room }: GameAdminProps) {
                                 <Badge variant="secondary" className="bg-white/20 text-white">
                                   Ativo
                                 </Badge>
+                                {bingoClaims.some(c => c.playerId === player.id && c.status === 'pending') && (
+                                  <Badge className="bg-yellow-500/80 text-black ml-2">
+                                    <Icon icon="material-symbols:campaign" className="mr-1" />
+                                    Bingo!
+                                  </Badge>
+                                )}
                               </div>
                               <Button
                                 onClick={() => handleCheckPlayerBingo(player)}
                                 size="sm"
                                 variant="outline"
                                 className="w-full border-white/30 text-white hover:bg-white/10"
+                                disabled={!bingoClaims.some(c => c.playerId === player.id)}
                               >
                                 <Icon icon="material-symbols:visibility" className="mr-2" />
-                                Verificar Bingo
+                                {bingoClaims.some(c => c.playerId === player.id) ? 'Verificar Bingo' : 'Verificar Bingo'}
                               </Button>
                             </CardContent>
                           </Card>
@@ -430,7 +633,6 @@ export function GameAdmin({ room }: GameAdminProps) {
           </div>
         </header>
 
-        {/* Roulette Section */}
         <div className="p-6">
           <Card className="bg-white/10 backdrop-blur-sm border-white/20">
             <CardHeader>
@@ -484,7 +686,6 @@ export function GameAdmin({ room }: GameAdminProps) {
           </Card>
         </div>
 
-        {/* Drawn Numbers Section */}
         <div className="p-6 flex-1">
           <Card className="bg-white/10 backdrop-blur-sm border-white/20 h-full">
             <CardHeader>
@@ -530,141 +731,20 @@ export function GameAdmin({ room }: GameAdminProps) {
         </div>
       </div>
 
-      {/* Win Animation - Full Screen */}
-      {showWinAnimation && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="fixed inset-0 bg-green-500/95 backdrop-blur-sm flex items-center justify-center z-[100]"
-          onClick={() => {
-            setShowWinAnimation(false)
-            setShowBingoCheck(false)
-            setWinPhrase(null)
+      {showBingoResult && bingoResult && (
+        <BingoResult
+          result={bingoResult.result}
+          playerName={bingoResult.playerName}
+          avatarConfig={bingoResult.avatarConfig}
+          phrase={bingoResult.phrase}
+          onClose={() => {
+            setShowBingoResult(false)
+            setBingoResult(null)
           }}
-        >
-          <motion.div 
-            className="text-center w-full h-full flex flex-col items-center justify-center p-8"
-            initial={{ scale: 0.8 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.1 }}
-          >
-            {/* Avatar + Nome */}
-            <motion.div
-              className="flex flex-col items-center gap-3 mb-6"
-              initial={{ y: -20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.15 }}
-            >
-              {selectedPlayer?.avatar_config ? (
-                <Avatar
-                  style={{ width: '80px', height: '80px' }}
-                  {...(selectedPlayer as any).avatar_config}
-                />
-              ) : (
-                <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-3xl">
-                  {selectedPlayer?.name?.charAt(0)?.toUpperCase() || '?'}
-                </div>
-              )}
-              <p className="text-2xl md:text-3xl text-white font-semibold">
-                {selectedPlayer?.name}
-              </p>
-            </motion.div>
-
-            <motion.div
-              initial={{ y: -50, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.2 }}
-            >
-              <Icon icon="material-symbols:celebration" className="text-9xl md:text-[12rem] text-white mb-8 mx-auto" />
-            </motion.div>
-            <motion.h2 
-              className="text-7xl md:text-9xl font-bold text-white mb-6"
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
-            >
-              BINGO!
-            </motion.h2>
-            <motion.p 
-              className="text-2xl md:text-4xl text-white mb-4 font-semibold max-w-3xl px-4"
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.4 }}
-            >
-              {winPhrase || 'Parabéns pelo bingo!'}
-            </motion.p>
-          </motion.div>
-        </motion.div>
+        />
       )}
 
-      {/* Lose Animation - Full Screen */}
-      {showLoseAnimation && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="fixed inset-0 bg-red-500/95 backdrop-blur-sm flex items-center justify-center z-[100]"
-          onClick={() => {
-            setShowLoseAnimation(false)
-            setShowBingoCheck(false)
-            setErrorPhrase(null)
-          }}
-        >
-          <motion.div 
-            className="text-center w-full h-full flex flex-col items-center justify-center p-8"
-            initial={{ scale: 0.8 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.1 }}
-          >
-            {/* Avatar + Nome */}
-            <motion.div
-              className="flex flex-col items-center gap-3 mb-6"
-              initial={{ y: -20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.15 }}
-            >
-              {selectedPlayer?.avatar_config ? (
-                <Avatar
-                  style={{ width: '80px', height: '80px' }}
-                  {...(selectedPlayer as any).avatar_config}
-                />
-              ) : (
-                <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-3xl">
-                  {selectedPlayer?.name?.charAt(0)?.toUpperCase() || '?'}
-                </div>
-              )}
-              <p className="text-2xl md:text-3xl text-white font-semibold">
-                {selectedPlayer?.name}
-              </p>
-            </motion.div>
-            <motion.div
-              initial={{ y: -50, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.2 }}
-            >
-              <Icon icon="material-symbols:close" className="text-9xl md:text-[12rem] text-white mb-8 mx-auto" />
-            </motion.div>
-            <motion.h2 
-              className="text-7xl md:text-9xl font-bold text-white mb-6"
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
-            >
-              NÃO É BINGO
-            </motion.h2>
-            <motion.p 
-              className="text-2xl md:text-4xl text-white mb-4 font-semibold max-w-3xl px-4"
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.4 }}
-            >
-              {errorPhrase || 'Verificação negada'}
-            </motion.p>
-          </motion.div>
-        </motion.div>
-      )}
-
-      {/* Bingo Check Dialog */}
-      <Dialog open={showBingoCheck && !showWinAnimation && !showLoseAnimation} onOpenChange={setShowBingoCheck}>
+      <Dialog open={showBingoCheck && !showBingoResult} onOpenChange={setShowBingoCheck}>
         <DialogContent className="w-7xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl">
@@ -673,7 +753,6 @@ export function GameAdmin({ room }: GameAdminProps) {
           </DialogHeader>
           
           <div className="space-y-6">
-            {/* Player Info */}
             <div className="bg-gray-50 p-4 rounded-lg">
               <div className="flex items-center gap-4 mb-4">
                 {selectedPlayer?.avatar_config ? (
@@ -707,10 +786,8 @@ export function GameAdmin({ room }: GameAdminProps) {
               </div>
             </div>
             
-            {/* Bingo Sheet */}
             <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
               <div className="flex gap-6">
-                {/* Bingo Sheet */}
                 <div className="flex-1">
                   <BingoSheet
                     numbers={selectedPlayer?.bingo_sheet && Array.isArray(selectedPlayer.bingo_sheet) ? selectedPlayer.bingo_sheet : []}
@@ -753,7 +830,6 @@ export function GameAdmin({ room }: GameAdminProps) {
               </div>
             </div>
             
-            {/* Verification Steps */}
             {!isVerifyingBingo ? (                
                 <div className="flex justify-center">
                   <Button
@@ -800,7 +876,6 @@ export function GameAdmin({ room }: GameAdminProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Confirmation Modals */}
       <ConfirmationModal
         open={showBackToWaitingConfirmation}
         onOpenChange={setShowBackToWaitingConfirmation}
@@ -820,6 +895,94 @@ export function GameAdmin({ room }: GameAdminProps) {
         onConfirm={handleEndGame}
         variant="destructive"
       />
+
+      <Dialog open={showBingoClaimsModal} onOpenChange={setShowBingoClaimsModal}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+              <Icon icon="material-symbols:campaign" className="text-yellow-500" />
+              Bingos Chamados - Rodada {currentRoom.round}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 mt-4">
+            {bingoClaims.length === 0 ? (
+              <p className="text-center text-gray-500 py-8">Nenhum bingo chamado ainda nesta rodada</p>
+            ) : (
+              bingoClaims.map((claim, index) => (
+                <Card key={claim.claimId} className="bg-white/10 backdrop-blur-sm border-white/20">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4 flex-1">
+                        <div className="flex-shrink-0">
+                          <div className="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-400 font-bold text-lg border-2 border-yellow-500/40">
+                            #{index + 1}
+                          </div>
+                        </div>
+                        {claim.avatarConfig ? (
+                          <Avatar
+                            style={{ width: '48px', height: '48px' }}
+                            {...claim.avatarConfig}
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold text-lg">
+                            {claim.name?.charAt(0)?.toUpperCase() || '?'}
+                          </div>
+                        )}
+                        <div className="flex-1">
+                          <h3 className="font-bold text-blue-500 text-lg">{claim.name}</h3>
+                          {claim.createdAt && (
+                            <p className="text-sm text-blue-400">
+                              Chamado às {new Date(claim.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          )}
+                          {claim.resultPhrase && (
+                            <p className="text-sm text-gray-600 mt-1 italic">
+                              "{claim.resultPhrase}"
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex-shrink-0">
+                          {claim.status === 'pending' && (
+                            <Badge className="bg-yellow-500/20 text-yellow-500 border border-yellow-500/40">
+                              Aguardando
+                            </Badge>
+                          )}
+                          {claim.status === 'win' && (
+                            <Badge className="bg-green-500/20 text-green-500 border border-green-500/40">
+                              Confirmado
+                            </Badge>
+                          )}
+                          {claim.status === 'lose' && (
+                            <Badge className="bg-red-500/20 text-red-500 border border-red-400/40">
+                              Rejeitado
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      {claim.status === 'pending' && (
+                        <Button
+                          onClick={() => {
+                            const player = players.find(p => p.id === claim.playerId)
+                            if (player) {
+                              handleCheckPlayerBingo(player)
+                              setShowBingoClaimsModal(false)
+                            }
+                          }}
+                          size="sm"
+                          className="ml-4 bg-blue-600 hover:bg-blue-700"
+                        >
+                          <Icon icon="material-symbols:visibility" className="mr-2" />
+                          Verificar
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 } 

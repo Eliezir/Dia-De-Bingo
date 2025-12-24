@@ -1,9 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from '@iconify/react'
+import { useNavigate } from '@tanstack/react-router'
 import { supabase } from '~/lib/supabase/client'
 import { BingoSheet } from './BingoSheet'
+import { BingoResult } from './BingoResult'
 import { Badge } from '~/components/ui/badge'
+import { Button } from '~/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '~/components/ui/dialog'
+import { toast } from 'sonner'
 import { saveMarkedNumbersToStorage, getMarkedNumbersFromStorage, saveCurrentRound } from '~/utils/playerStorage'
 import type { Player, Room } from '~/types/game'
 
@@ -13,44 +18,109 @@ interface GamePlayerProps {
 }
 
 export function GamePlayer({ room, currentPlayer }: GamePlayerProps) {
+  const navigate = useNavigate()
   const [currentRoom, setCurrentRoom] = useState(room)
+  const currentRoomRef = useRef(room)
   const [markedNumbers, setMarkedNumbers] = useState<Set<number>>(new Set())
+  const [hasCalledBingo, setHasCalledBingo] = useState(false)
+  const [bingoClaims, setBingoClaims] = useState<
+    { claimId: number; playerId: number; name: string; avatarConfig?: any; status: 'pending' | 'win' | 'lose'; phrase?: string }[]
+  >([])
+  const [bingoChannel, setBingoChannel] = useState<any>(null)
+  const [currentBingoResult, setCurrentBingoResult] = useState<{
+    playerId: number;
+    result: 'win' | 'lose';
+    phrase: string;
+    playerName: string;
+    avatarConfig?: any;
+  } | null>(null)
+  const [showBingoConfirmation, setShowBingoConfirmation] = useState(false)
 
   useEffect(() => {
-    const storedMarkedNumbers = getMarkedNumbersFromStorage(room.code, currentPlayer.id, room.round)
+    const fetchLatestRoom = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('room')
+          .select('*')
+          .eq('code', room.code)
+          .single()
+
+        if (error) throw error
+
+        if (data) {
+          if (data.status === 'waiting' && room.status === 'playing') {
+            navigate({ to: `/room/${data.code}` })
+            return
+          } else if (data.status === 'finished') {
+            navigate({ to: `/room/${data.code}/game-over` })
+            return
+          }
+
+          setCurrentRoom(data)
+          currentRoomRef.current = data
+        }
+      } catch (error) {
+      }
+    }
+
+    fetchLatestRoom()
+  }, [room.code, room.status, navigate])
+
+  useEffect(() => {
+    setCurrentRoom(room)
+    currentRoomRef.current = room
+  }, [room])
+
+  useEffect(() => {
+    const storedMarkedNumbers = getMarkedNumbersFromStorage(currentRoom.code, currentPlayer.id, currentRoom.round)
     setMarkedNumbers(new Set(storedMarkedNumbers))
     
-    saveCurrentRound(room.code, room.round)
-  }, [room.code, currentPlayer.id, room.round])
+    saveCurrentRound(currentRoom.code, currentRoom.round)
+  }, [currentRoom.code, currentPlayer.id, currentRoom.round])
 
   useEffect(() => {
     if (markedNumbers.size > 0) {
-      saveMarkedNumbersToStorage(Array.from(markedNumbers), room.code, currentPlayer.id, room.round)
+      saveMarkedNumbersToStorage(Array.from(markedNumbers), currentRoom.code, currentPlayer.id, currentRoom.round)
     }
-  }, [markedNumbers, room.code, currentPlayer.id, room.round])
+  }, [markedNumbers, currentRoom.code, currentPlayer.id, currentRoom.round])
 
   useEffect(() => {
-    const roomUpdateSubscription = supabase.channel(`game-player-room-${room.id}`)
+    if (!currentRoom.id) return
+
+    const roomUpdateSubscription = supabase.channel(`game-player-room-${currentRoom.id}`)
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'room', filter: `id=eq.${room.id}` },
+        { event: 'UPDATE', schema: 'public', table: 'room', filter: `id=eq.${currentRoom.id}` },
         (payload) => {
           const updatedRoom = payload.new as Room
-          setCurrentRoom(updatedRoom)
+          const previousStatus = currentRoomRef.current.status
+          const previousRound = currentRoomRef.current.round
           
-          // Handle room status changes
-          if (updatedRoom.status === 'waiting') {
-            // Redirect to waiting room when admin goes back to waiting room
-            window.location.href = `/room/${room.code}`
-          } else if (updatedRoom.status === 'finished') {
-            // Redirect to game over when game is finished
-            window.location.href = `/room/${room.code}/game-over`
+          const roundChanged = updatedRoom.round !== previousRound
+          const statusChanged = updatedRoom.status !== previousStatus
+          
+
+          if (statusChanged) {
+            if (updatedRoom.status === 'waiting') {
+              window.location.href = `/room/${updatedRoom.code}`
+              return
+            } else if (updatedRoom.status === 'finished') {
+              window.location.href = `/room/${updatedRoom.code}/game-over`
+              return
+            }
           }
           
-          // Handle round changes
-          if (updatedRoom.round !== room.round) {
+          currentRoomRef.current = updatedRoom
+          
+          setCurrentRoom(updatedRoom)
+          
+          if (roundChanged) {
             setMarkedNumbers(new Set())
-            saveCurrentRound(room.code, updatedRoom.round)
+            setHasCalledBingo(false)
+            setBingoClaims([])
+            setCurrentBingoResult(null)
+            saveCurrentRound(updatedRoom.code, updatedRoom.round)
+            toast.info(`Nova rodada iniciada! (Rodada ${updatedRoom.round})`)
           }
         }
       )
@@ -59,7 +129,51 @@ export function GamePlayer({ room, currentPlayer }: GamePlayerProps) {
     return () => {
       roomUpdateSubscription.unsubscribe()
     }
-  }, [room.id, room.code, room.round])
+  }, [currentRoom.id, navigate])
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`bingo:${currentRoom.id}`)
+      .on('broadcast', { event: 'bingo-claim' }, (event) => {
+        const payload = event.payload as { playerId: number; name: string; avatarConfig?: any; claimId: number; round?: number }
+        if (payload.round && payload.round !== currentRoom.round) return
+        setBingoClaims((prev) => {
+          if (prev.some((c) => c.playerId === payload.playerId && c.status === 'pending')) return prev
+          return [...prev, { claimId: payload.claimId, playerId: payload.playerId, name: payload.name, avatarConfig: payload.avatarConfig, status: 'pending' }]
+        })
+      })
+      .on('broadcast', { event: 'bingo-result' }, (event) => {
+        const payload = event.payload as { playerId: number; result: 'win' | 'lose'; phrase: string; playerName?: string; avatarConfig?: any }
+        setBingoClaims((prev) =>
+          prev.map((c) =>
+            c.playerId === payload.playerId ? { ...c, status: payload.result, phrase: payload.phrase } : c
+          )
+        )
+
+        if (payload.playerId === currentPlayer.id) {
+          setHasCalledBingo(false)
+        }
+
+        setCurrentBingoResult({
+          playerId: payload.playerId,
+          result: payload.result,
+          phrase: payload.phrase,
+          playerName: payload.playerName || bingoClaims.find(c => c.playerId === payload.playerId)?.name || 'Jogador',
+          avatarConfig: payload.avatarConfig || bingoClaims.find(c => c.playerId === payload.playerId)?.avatarConfig
+        })
+        
+        setTimeout(() => {
+          setCurrentBingoResult(null)
+        }, 5000)
+      })
+      .subscribe()
+
+    setBingoChannel(channel)
+
+    return () => {
+      channel.unsubscribe()
+    }
+  }, [currentRoom.id, currentPlayer.id, currentRoom.round])
 
   const handleNumberClick = (number: number) => {
     setMarkedNumbers(prev => {
@@ -71,6 +185,80 @@ export function GamePlayer({ room, currentPlayer }: GamePlayerProps) {
       }
       return newSet
     })
+  }
+
+  const handleCallBingoClick = () => {
+    const hasPendingClaim = bingoClaims.some(
+      claim => claim.playerId === currentPlayer.id && claim.status === 'pending'
+    )
+
+    if (hasPendingClaim || hasCalledBingo) {
+      toast.info('Você já chamou bingo nesta rodada!')
+      return
+    }
+
+    setShowBingoConfirmation(true)
+  }
+
+  const handleConfirmBingoCall = async () => {
+    if (!bingoChannel || hasCalledBingo) return
+
+
+    setShowBingoConfirmation(false)
+
+    try {
+      const { data: existingClaims, error: checkError } = await supabase
+        .from('bingo_claims')
+        .select('id, status')
+        .eq('player_id', currentPlayer.id)
+        .eq('room_id', currentRoom.id)
+        .eq('round', currentRoom.round)
+        .in('status', ['pending'])
+
+      if (checkError) {
+        toast.error('Erro ao verificar bingo')
+        return
+      }
+
+      if (existingClaims && existingClaims.length > 0) {
+        toast.error('Você já tem um bingo pendente nesta rodada!')
+        return
+      }
+
+      const { data: claim, error } = await supabase
+        .from('bingo_claims')
+        .insert({
+          player_id: currentPlayer.id,
+          room_id: currentRoom.id,
+          round: currentRoom.round,
+          status: 'pending'
+        })
+        .select()
+        .single()
+
+      if (error) {
+        toast.error('Erro ao chamar bingo')
+        return
+      }
+
+      setHasCalledBingo(true)
+
+      await bingoChannel.send({
+        type: 'broadcast',
+        event: 'bingo-claim',
+        payload: {
+          playerId: currentPlayer.id,
+          name: currentPlayer.name,
+          avatarConfig: currentPlayer.avatar_config,
+          claimId: claim.id,
+          round: currentRoom.round
+        }
+      })
+
+      toast.success('Bingo chamado! Aguardando verificação...')
+    } catch (error) {
+      toast.error('Erro ao chamar bingo')
+    }
   }
 
   const containerVariants = {
@@ -104,12 +292,11 @@ export function GamePlayer({ room, currentPlayer }: GamePlayerProps) {
         }}
       />
       
-      {/* Header */}
       <header className="p-4 bg-white/10 backdrop-blur-sm text-white">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="text-left">
             <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-2xl md:text-3xl font-bold">{room.name}</h1>
+              <h1 className="text-2xl md:text-3xl font-bold">{currentRoom.name}</h1>
               <Badge className="bg-blue-500/80 text-white text-sm md:text-base px-2 py-1">
                 Rodada {currentRoom.round}
               </Badge>
@@ -125,7 +312,6 @@ export function GamePlayer({ room, currentPlayer }: GamePlayerProps) {
         </div>
       </header>
       
-      {/* Main Content */}
       <main className="flex-1 flex flex-col items-center justify-center p-4 md:p-6">
         <motion.div
           className="w-full max-w-md mx-auto"
@@ -178,9 +364,8 @@ export function GamePlayer({ room, currentPlayer }: GamePlayerProps) {
         </motion.div>
       </main>
 
-      {/* Footer */}
       <footer className="p-4 bg-black/20">
-        <div className="max-w-6xl mx-auto flex justify-between items-center text-white">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center text-white gap-3">
           <div className="flex items-center gap-2">
             <Icon icon="material-symbols:casino" />
             <span className="font-medium">Jogo em andamento</span>
@@ -189,8 +374,66 @@ export function GamePlayer({ room, currentPlayer }: GamePlayerProps) {
             <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
             <span className="font-medium">Aguardando números</span>
           </div>
+          <Button
+            onClick={handleCallBingoClick}
+            disabled={hasCalledBingo}
+            className="bg-blue-500 hover:bg-blue-600 text-white font-bold flex items-center gap-2 px-6 py-2 rounded-full shadow-lg disabled:opacity-50"
+          >
+            <Icon icon="material-symbols:campaign" className="text-xl" />
+            {hasCalledBingo 
+              ? 'Bingo enviado' 
+                : 'Gritar BINGO'}
+          </Button>
         </div>
       </footer>
+
+  
+      {currentBingoResult && (
+        <BingoResult
+          result={currentBingoResult.result}
+          playerName={currentBingoResult.playerName}
+          avatarConfig={currentBingoResult.avatarConfig}
+          phrase={currentBingoResult.phrase}
+          onClose={() => setCurrentBingoResult(null)}
+        />
+      )}
+
+      <Dialog open={showBingoConfirmation} onOpenChange={setShowBingoConfirmation}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-center text-whit">Confirmar Bingo</DialogTitle>
+            <DialogDescription className="text-center text-base pt-2">
+              <div className="space-y-3">
+                <p className="text-red-600 font-semibold">
+                  ⚠️ É muito paia fingir bingo!
+                </p>
+                <p>
+                  Certifique-se de que você realmente completou uma linha, coluna ou diagonal antes de confirmar.
+                </p>
+                <p className="text-sm text-gray-600">
+                  Falsos bingos podem resultar em penalidades.
+                </p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowBingoConfirmation(false)}
+              className="flex-1"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleConfirmBingoCall}
+              className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold"
+            >
+              <Icon icon="material-symbols:campaign" className="mr-2" />
+              Confirmar Bingo
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 } 
