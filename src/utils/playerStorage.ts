@@ -3,6 +3,7 @@ import type { Player } from '~/types/game'
 const PLAYER_KEY = 'bingo-player'
 const MARKED_NUMBERS_KEY = 'bingo-marked-numbers'
 const ROUND_KEY = 'bingo-round'
+const AVATAR_CONFIG_KEY = 'bingo-avatar-config'
 
 export function savePlayerToStorage(player: Player, roomCode: string) {
   localStorage.setItem(PLAYER_KEY, JSON.stringify({ player, roomCode }))
@@ -67,5 +68,21 @@ export function getCurrentRound(roomCode: string): number {
     return JSON.parse(raw)
   } catch {
     return 1
+  }
+}
+
+export function saveAvatarConfig(playerId: number, config: any) {
+  const key = `${AVATAR_CONFIG_KEY}-${playerId}`
+  localStorage.setItem(key, JSON.stringify(config))
+}
+
+export function getAvatarConfig(playerId: number): any | null {
+  try {
+    const key = `${AVATAR_CONFIG_KEY}-${playerId}`
+    const raw = localStorage.getItem(key)
+    if (!raw) return null
+    return JSON.parse(raw)
+  } catch {
+    return null
   }
 } 

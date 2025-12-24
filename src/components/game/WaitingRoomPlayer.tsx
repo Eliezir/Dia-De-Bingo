@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from '@iconify/react'
+import Avatar, { genConfig } from 'react-nice-avatar'
 import { Button } from '~/components/ui/button'
-import { Avatar, AvatarFallback } from '~/components/ui/avatar'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '~/components/ui/dialog'
 import { toast } from 'sonner'
 import { supabase } from '~/lib/supabase/client'
 import { BingoSheet } from './BingoSheet'
-import { savePlayerToStorage, clearMarkedNumbersStorage } from '~/utils/playerStorage'
+import { AvatarBuilder } from './AvatarBuilder'
+import { savePlayerToStorage, clearMarkedNumbersStorage, saveAvatarConfig, getAvatarConfig } from '~/utils/playerStorage'
 import type { Room, Player } from '~/types/game'
+
+type AvatarConfig = ReturnType<typeof genConfig>
 
 interface WaitingRoomPlayerProps {
   room: Room
@@ -18,6 +21,11 @@ interface WaitingRoomPlayerProps {
 export function WaitingRoomPlayer({ room, currentPlayer }: WaitingRoomPlayerProps) {
   const [onlinePlayers, setOnlinePlayers] = useState<any[]>([])
   const [bingoSheet, setBingoSheet] = useState<number[][]>([])
+  const [avatarConfig, setAvatarConfig] = useState<AvatarConfig | null>(() => {
+    const saved = getAvatarConfig(currentPlayer.id)
+    if (saved) return saved
+    return genConfig(currentPlayer.name)
+  })
 
   // Use the bingo sheet from the player data
   useEffect(() => {
@@ -200,17 +208,33 @@ export function WaitingRoomPlayer({ room, currentPlayer }: WaitingRoomPlayerProp
           variants={itemVariants}
         >
           <div className="flex items-center justify-center gap-4 bg-white/10 backdrop-blur-sm rounded-lg p-4 text-white">
-            <Avatar className="w-12 h-12">
-              <AvatarFallback className="bg-blue-100 text-blue-600 font-semibold">
+            {avatarConfig ? (
+              <Avatar
+                style={{ width: '48px', height: '48px' }}
+                {...avatarConfig}
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
                 {currentPlayer.name?.charAt(0)?.toUpperCase() || '?'}
-              </AvatarFallback>
-            </Avatar>
+              </div>
+            )}
             <div className="text-center">
               <div className="font-bold text-lg">
                 {currentPlayer.name || 'Jogador'}
               </div>
               <div className="text-sm text-blue-100">Jogador</div>
             </div>
+          </div>
+          <div className="flex justify-center mt-4">
+            <AvatarBuilder
+              currentConfig={avatarConfig}
+              onSave={(config) => {
+                setAvatarConfig(config)
+                saveAvatarConfig(currentPlayer.id, config)
+                toast.success('Avatar salvo com sucesso!')
+              }}
+              playerName={currentPlayer.name}
+            />
           </div>
         </motion.div>
 
