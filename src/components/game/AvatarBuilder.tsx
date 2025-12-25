@@ -124,7 +124,7 @@ export function AvatarBuilder({ currentConfig, onSave, playerName }: AvatarBuild
           Personalizar Avatar
         </Button>
       </DialogTrigger>
-      <DialogContent className="w-full max-w-[95vw] max-h-[95vh] overflow-y-auto bg-gradient-to-br from-[#3c95f1] to-[#c3def9] border-white/20 p-4 md:p-6">
+      <DialogContent className="w-full max-w-[95vw] max-h-[85vh] overflow-y-auto bg-gradient-to-br from-[#3c95f1] to-[#c3def9] border-white/20 p-4 md:p-6">
         <DialogHeader>
           <DialogTitle className="text-white text-xl md:text-2xl font-bold">Personalizar Avatar</DialogTitle>
         </DialogHeader>
